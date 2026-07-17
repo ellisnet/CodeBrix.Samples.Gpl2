@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+
+    <!-- Match the namespace used by the app code -->
+    <RootNamespace>Wolfenstein.Brix</RootNamespace>
+
+    <!-- CodeBrix.Platform needs these for internal conditional compilation -->
+    <DefineConstants>$(DefineConstants);HAS_CODEBRIX;HAS_CODEBRIX_WINUI</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.10" />
+    <PackageReference Include="CodeBrix.Platform.ApacheLicenseForever" Version="1.0.197.800" />
+    <PackageReference Include="CodeBrix.Platform.Fonts.OpenSans.ApacheLicenseForever" Version="1.0.181.655" />
+    <!-- The embedded browser for Assets Mode: the Windows and macOS runtimes have a
+         WebView2 built in; the Linux heads get theirs from this add-in (WPE WebKit) -->
+    <PackageReference Include="CodeBrix.Platform.WebView.ApacheLicenseForever" Version="1.0.197.800" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\libs\Wolfenstein.Brix.Assets\Wolfenstein.Brix.Assets.csproj" />
+    <ProjectReference Include="..\libs\Wolfenstein.Brix.Game\Wolfenstein.Brix.Game.csproj" />
+    <ProjectReference Include="..\libs\Wolfenstein.Brix.GameEngine\Wolfenstein.Brix.GameEngine.csproj" />
+    <ProjectReference Include="..\libs\Wolfenstein.Brix.Settings\Wolfenstein.Brix.Settings.csproj" />
+  </ItemGroup>
+</Project>

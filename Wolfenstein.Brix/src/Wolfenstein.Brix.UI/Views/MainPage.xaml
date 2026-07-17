@@ -1,0 +1,158 @@
+<Page
+    x:Class="Wolfenstein.Brix.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Wolfenstein.Brix.ViewModels"
+    FontFamily="{StaticResource OpenSansFont}"
+    Background="#FF00006B">
+
+    <Page.DataContext>
+        <vm:MainViewModel />
+    </Page.DataContext>
+
+    <Grid>
+
+        <!-- ============================ ASSETS MODE ============================ -->
+        <Grid Visibility="{Binding AssetsModeVisibility}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Header band: deep DOS blue with the stone-gray title and red rule -->
+            <Border Grid.Row="0" Background="#FF000048"
+                    BorderBrush="#FFB01010" BorderThickness="0,0,0,3"
+                    Padding="20,14,20,12">
+                <StackPanel>
+                    <TextBlock Text="WOLFENSTEIN.BRIX"
+                               FontSize="38" FontWeight="Black" CharacterSpacing="150"
+                               Foreground="#FFD9D9D9" />
+                    <TextBlock Text="ASSETS MODE — SHAREWARE EPISODE SETUP"
+                               FontSize="13" FontWeight="SemiBold" CharacterSpacing="220"
+                               Foreground="#FF9AA4C8" Margin="2,4,0,0" />
+                </StackPanel>
+            </Border>
+
+            <!-- Assets folder bar -->
+            <Border Grid.Row="1" Background="#FF000048"
+                    BorderBrush="#FF5A5A6E" BorderThickness="0,0,0,1"
+                    Padding="20,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="ASSET FOLDER:"
+                               FontWeight="Bold" Foreground="#FFE8E8F0"
+                               VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <Button Grid.Column="1" HorizontalAlignment="Left" MaxWidth="700" Height="36"
+                            Background="#FF4A4A55" Foreground="#FFF2F2F2"
+                            BorderBrush="#FFB01010" BorderThickness="2"
+                            Content="{Binding AssetsFolderLabel}"
+                            Command="{Binding PickFolderCommand}" />
+                </Grid>
+            </Border>
+
+            <!-- Content area -->
+            <Grid Grid.Row="2">
+
+                <!-- Folder setup (no folder chosen yet) -->
+                <Border Visibility="{Binding FolderSetupVisibility}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="#FF000048" BorderBrush="#FF8A8A9A" BorderThickness="2"
+                        MaxWidth="620" Padding="32,28">
+                    <StackPanel>
+                        <TextBlock Text="SELECT YOUR ASSETS FOLDER"
+                                   FontSize="22" FontWeight="Black" CharacterSpacing="120"
+                                   Foreground="#FFFFD24A" HorizontalAlignment="Center" />
+                        <TextBlock Margin="0,14,0,22" TextWrapping="Wrap" FontSize="15"
+                                   Foreground="#FFD9D9E4" TextAlignment="Center"
+                                   Text="Wolfenstein.Brix needs a folder to keep the Wolfenstein 3D shareware game files (the eight .WL1 data files, plus the VENDOR.DOC license text). Choose where those files should live — your choice is remembered between sessions." />
+                        <Button HorizontalAlignment="Center" Height="44" Padding="24,0" FontWeight="Bold"
+                                Background="#FF4A4A55" Foreground="#FFF2F2F2"
+                                BorderBrush="#FFB01010" BorderThickness="2"
+                                Content="CHOOSE ASSETS FOLDER…"
+                                Command="{Binding PickFolderCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Browser area (folder chosen: go get 1wolf14.zip) -->
+                <Grid Visibility="{Binding BrowserAreaVisibility}" Margin="20,12,20,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#FF1A1A5E"
+                            BorderBrush="#FFFFD24A" BorderThickness="1"
+                            Padding="12,8" Margin="0,0,0,10">
+                        <TextBlock TextWrapping="Wrap" Foreground="#FFFFD24A" FontSize="14"
+                                   Text="HINT: Download the “Wolfenstein 3D v1.4g Shareware Episode (856,401 bytes)” file from this page." />
+                    </Border>
+
+                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="AddressBox" Grid.Column="0" Height="38"
+                                 VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                 Background="#FF000048" Foreground="#FFF2F2F2" BorderBrush="#FF5A5A6E"
+                                 KeyDown="AddressBox_KeyDown"
+                                 Text="{Binding AddressText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <Button Grid.Column="1" Width="80" Height="38" Margin="10,0,0,0" FontWeight="Bold"
+                                Background="#FF4A4A55" Foreground="#FFF2F2F2"
+                                BorderBrush="#FFB01010" BorderThickness="2"
+                                Content="GO" Command="{Binding GoCommand}" />
+                    </Grid>
+
+                    <Border Grid.Row="2" BorderBrush="#FF5A5A6E" BorderThickness="1">
+                        <WebView2 x:Name="Browser" />
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- ============================= GAME MODE ============================= -->
+        <Grid Visibility="{Binding GameModeVisibility}" Background="#FF000038">
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="#FF000048" BorderBrush="#FFB01010" BorderThickness="3"
+                    Padding="48,36">
+                <StackPanel>
+                    <TextBlock Text="Wolfenstein.Brix Game Mode"
+                               FontSize="44" FontWeight="Black"
+                               Foreground="#FFD9D9D9" HorizontalAlignment="Center" />
+                    <TextBlock Text="EPISODE 1: ESCAPE FROM WOLFENSTEIN — COMING SOON"
+                               FontSize="13" FontWeight="SemiBold" CharacterSpacing="220"
+                               Foreground="#FFFFD24A" HorizontalAlignment="Center" Margin="0,12,0,0" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Download/verify/extract progress overlay (topmost): Get Psyched! -->
+        <Grid Visibility="{Binding DownloadOverlayVisibility}" Background="#E0000020">
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="#FF000048" BorderBrush="#FF8A8A9A" BorderThickness="2"
+                    Padding="36,28" MinWidth="480">
+                <StackPanel>
+                    <TextBlock Text="GET PSYCHED!"
+                               FontSize="30" FontWeight="Black" CharacterSpacing="150"
+                               Foreground="#FFFFD24A" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding DownloadStageText}" Margin="0,10,0,0"
+                               FontSize="15" FontWeight="SemiBold"
+                               Foreground="#FFD9D9E4" HorizontalAlignment="Center" />
+                    <!-- The red-on-cream loading bar, just like the original -->
+                    <ProgressBar Margin="0,16,0,8" Height="20" Minimum="0" Maximum="100"
+                                 Foreground="#FFB01010" Background="#FFD6D6C8"
+                                 Value="{Binding DownloadProgress}" />
+                    <TextBlock Text="{Binding DownloadProgressText}"
+                               FontSize="14" FontWeight="Bold"
+                               Foreground="#FFFFD24A" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+    </Grid>
+</Page>

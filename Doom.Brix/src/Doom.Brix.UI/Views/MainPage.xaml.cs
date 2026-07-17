@@ -1,0 +1,65 @@
+using CodeBrix.Platform.Simple;
+using Doom.Brix.ViewModels;
+using Microsoft.UI.Xaml.Controls;
+using System;
+
+namespace Doom.Brix.Views;
+
+public sealed partial class MainPage : Page
+{
+    private bool _browserInitialized;
+
+    public MainPage()
+    {
+        //Doing this before InitializeComponent() - in case InitializeComponent()
+        //  is the thing that sets the data context.
+        DataContextChanged += (_, _) =>
+        {
+            //Give the view model's SimpleDialog helpers a XamlRoot to attach dialogs to
+            (DataContext as IXamlRootGetter)?.SetXamlRootGetter(() => XamlRoot);
+        };
+
+        this.InitializeComponent();
+
+        Loaded += (_, _) => InitializeBrowser();
+    }
+
+    private void InitializeBrowser()
+    {
+        if (_browserInitialized || DataContext is not MainViewModel viewModel) { return; }
+        _browserInitialized = true;
+
+        //Assets Mode download policy: the one permitted asset file (doom19s.zip) is
+        //  intercepted here and downloaded/verified/extracted by the .Assets pipeline
+        //  instead; any other download-looking link is canceled with an explanation.
+        //  Ordinary page navigation passes through untouched.
+        Browser.NavigationStarting += (_, args) =>
+        {
+            if (viewModel.HandleNavigationStarting(args.Uri)) { args.Cancel = true; }
+        };
+
+        //Use CoreWebView2.Source (the authoritative current URL after redirects / user
+        //  navigation); the XAML Browser.Source property does not reliably reflect those.
+        Browser.NavigationCompleted += (_, _) =>
+            viewModel.SetCurrentBrowserUrl(Browser.CoreWebView2?.Source ?? Browser.Source?.AbsoluteUri);
+
+        viewModel.NavigateToUrl = url =>
+        {
+            if (!string.IsNullOrWhiteSpace(url)) { Browser.Source = new Uri(url); }
+        };
+
+        viewModel.OnBrowserReady();
+    }
+
+    //Pressing Enter in the address bar navigates, just like clicking GO.
+    private void AddressBox_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter
+            && DataContext is MainViewModel { GoCommand: var go }
+            && go.CanExecute(null))
+        {
+            go.Execute(null);
+            e.Handled = true;
+        }
+    }
+}

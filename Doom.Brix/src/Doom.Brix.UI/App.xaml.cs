@@ -52,6 +52,29 @@ public partial class App : Application
             rootFrame.Navigate(typeof(Views.MainPage), args.Arguments);
         }
 
+        //The GameEngine's GLOBAL pause: minimizing the window parks the whole
+        //  engine (the 35 Hz game loop idles at ~zero CPU and audio suspends);
+        //  restoring resumes exactly where it left off, with the pause invisible
+        //  to game time. Doom's own in-game pause is separate game logic and
+        //  unaffected. Both calls are idempotent, and a pause that lands before
+        //  the game host initializes simply starts the loop parked.
+        //KNOWN PLATFORM GAP (CodeBrix.Platform 1.0.197.800): the X11 head raises
+        //  VisibilityChanged only from VisibilityNotify (obscured-state) events and
+        //  ignores UnmapNotify, so minimizing on X11 does not fire this event (and
+        //  raises no Activated/Deactivated either) — the game keeps running
+        //  minimized there until the platform wires iconification to visibility.
+        MainWindow.VisibilityChanged += (_, e) =>
+        {
+            if (e.Visible)
+            {
+                global::CodeBrix.Platform.GameEngine.Engine.Instance.Resume();
+            }
+            else
+            {
+                global::CodeBrix.Platform.GameEngine.Engine.Instance.Pause();
+            }
+        };
+
         MainWindow.Activate();
     }
 

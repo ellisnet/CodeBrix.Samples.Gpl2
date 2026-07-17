@@ -1,5 +1,54 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+
+    <!-- Keep a distinct RootNamespace (not the app's "Doom.Brix") so the transitive
+         CodeBrix.Platform reference does not generate a duplicate GlobalStaticResources. -->
+    <RootNamespace>Doom.Brix.Game</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Doom.Brix.GameEngine\Doom.Brix.GameEngine.csproj" />
+    <!-- The sqlite-backed IDoomStorage (SqliteDoomStorage) persists config and
+         save slots through Doom.Brix.Settings' SettingsService, so the game
+         writes no files of its own. This is a plain managed reference to the
+         settings facade; SettingsStore remains the sole owner of the sqlite
+         handle (the CodeBrix.Sqlite package reference lives only in
+         Doom.Brix.Settings). -->
+    <ProjectReference Include="..\Doom.Brix.Settings\Doom.Brix.Settings.csproj" />
+  </ItemGroup>
+
+  <!-- The GPLv2 TimGM6mb SoundFont (by Tim Brechbill) ships with the application for
+       music playback; without it the game runs music-less. Content items marked
+       copy-to-output flow transitively through ProjectReference, so every head's
+       output folder gets ThirdPartyAssets/TimGM6mb.sf2 automatically. The
+       third-party license texts and the repo's notices file ride along into the
+       same output folder, so a distributed build carries its own compliance set. -->
+  <ItemGroup>
+    <Content Include="ThirdPartyAssets\TimGM6mb.sf2">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\LICENSE_ManagedDoom.txt" Link="ThirdPartyAssets\LICENSE_ManagedDoom.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\LICENSE_MeltySynth.txt" Link="ThirdPartyAssets\LICENSE_MeltySynth.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\LICENSE_TimGM6mb.txt" Link="ThirdPartyAssets\LICENSE_TimGM6mb.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\..\THIRD-PARTY-NOTICES.txt" Link="ThirdPartyAssets\THIRD-PARTY-NOTICES.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- TEMPORARY: the CodeBrix.Platform.GameEngine packages are not published yet, so
+       these are local project references into the sibling ~/GitHome checkout of the
+       CodeBrix.Platform.GameEngine repo. Replace both with the
+       CodeBrix.Platform.GameEngine[.Host].ApacheLicenseForever PackageReferences (and
+       drop the matching entries from Doom.Brix.slnx) when the family NuGets publish. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\..\CodeBrix.Platform.GameEngine\src\CodeBrix.Platform.GameEngine\CodeBrix.Platform.GameEngine.csproj" />
+    <ProjectReference Include="..\..\..\..\..\CodeBrix.Platform.GameEngine\src\CodeBrix.Platform.GameEngine.Host\CodeBrix.Platform.GameEngine.Host.csproj" />
+  </ItemGroup>
 </Project>

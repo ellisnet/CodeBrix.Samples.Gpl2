@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using ManagedDoom;
 using ManagedDoom.Audio;
-using MeltySynth;
+using Doom.Brix.Synth;
 using SilverAssertions;
 using Xunit;
 

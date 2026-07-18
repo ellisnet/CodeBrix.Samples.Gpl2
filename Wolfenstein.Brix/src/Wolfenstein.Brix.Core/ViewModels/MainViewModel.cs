@@ -2,9 +2,11 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using CodeBrix.Platform.GameEngine.Host.Rendering;
 using CodeBrix.Platform.Simple;
 using Wolfenstein.Brix.Assets;
 using Wolfenstein.Brix.Assets.Models;
+using Wolfenstein.Brix.Game;
 using Wolfenstein.Brix.Settings;
 using Microsoft.UI.Xaml;
 using Windows.Storage.Pickers;
@@ -16,9 +18,10 @@ namespace Wolfenstein.Brix.ViewModels;
 /// visibility: <b>Assets Mode</b> (pick an assets folder, then browse the web
 /// in the embedded WebView to download 1wolf14.zip — the one file the browser
 /// is allowed to download, which the .Assets pipeline verifies and extracts)
-/// and <b>Game Mode</b> (for now, a placeholder screen). Startup goes straight
-/// to Game Mode when the settings.sqlite-remembered folder already holds
-/// verified game files.
+/// and <b>Game Mode</b> (the game canvas: <see cref="WolfGameHost"/> runs the
+/// Wolfenstein.Brix engine against the verified assets folder). Startup goes
+/// straight to Game Mode when the settings.sqlite-remembered folder already
+/// holds verified game files.
 /// </summary>
 [Microsoft.UI.Xaml.Data.Bindable]
 public class MainViewModel : SimpleViewModel
@@ -28,6 +31,8 @@ public class MainViewModel : SimpleViewModel
 
     private string _assetsFolder;
     private bool _isGameMode;
+    private GameSurfaceCanvas _gameCanvas;
+    private WolfGameHost _gameHost;
     private bool _isDownloading;
     private double _downloadProgress;
     private string _downloadStageText = string.Empty;
@@ -65,6 +70,7 @@ public class MainViewModel : SimpleViewModel
         {
             SetProperty(ref _isGameMode, value);
             NotifyModeProperties();
+            StartGameIfReady();
         }
     }
 
@@ -214,6 +220,46 @@ public class MainViewModel : SimpleViewModel
         }
 
         EnsureBrowserStarted();
+    }
+
+    #endregion
+
+    #region | Game hosting |
+
+    /// <summary>
+    /// Called (on the UI thread) by the page code-behind when the game canvas first
+    /// renders with a real size — with the canvas inside the Game Mode grid, that is
+    /// when Game Mode first becomes visible.
+    /// </summary>
+    public void CanvasFirstStart(GameSurfaceCanvas canvas)
+    {
+        _gameCanvas = canvas;
+
+        //Focus loss pauses gameplay into the menu (the game's own pause;
+        //  the engine-level minimize pause is wired in App.xaml.cs).
+        canvas.LostFocus += (_, _) => _gameHost?.NotifyFocusLost();
+
+        StartGameIfReady();
+    }
+
+    //The host boots exactly once, when BOTH prerequisites have arrived (in either
+    //  order): the canvas has started, and Game Mode is active with a verified
+    //  assets folder for the host's data directory.
+    private void StartGameIfReady()
+    {
+        if (_gameHost != null || _gameCanvas == null || !IsGameMode || !HasAssetsFolder)
+        {
+            return;
+        }
+
+        _gameHost = new WolfGameHost(_gameCanvas, _assetsFolder, new SqliteWolfStorage());
+
+        //The menu's Quit item completed: close the application. The event
+        //  arrives on the game-loop thread; hop to the UI thread to exit.
+        _gameHost.GameExited += () =>
+            _gameCanvas.DispatcherQueue.TryEnqueue(() => Application.Current.Exit());
+
+        _gameHost.Initialize();
     }
 
     #endregion

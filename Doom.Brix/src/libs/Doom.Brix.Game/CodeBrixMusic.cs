@@ -17,7 +17,7 @@ using System;
 using CodeBrix.Platform.GameEngine.Audio;
 using ManagedDoom;
 using ManagedDoom.Audio;
-using MeltySynth;
+using Doom.Brix.Synth;
 
 namespace Doom.Brix.Game;
 

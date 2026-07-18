@@ -52,6 +52,29 @@ public partial class App : Application
             rootFrame.Navigate(typeof(Views.MainPage), args.Arguments);
         }
 
+        //The GameEngine's GLOBAL pause: minimizing the window parks the whole
+        //  engine (the 70 Hz game loop idles at ~zero CPU and audio — including
+        //  the OPL music stream — suspends); restoring resumes exactly where it
+        //  left off, with the pause invisible to game time. The game's own
+        //  ESC-menu pause is separate game logic and unaffected. Both calls are
+        //  idempotent, and a pause that lands before the game host initializes
+        //  simply starts the loop parked.
+        //NOTE (CodeBrix.Platform 1.0.197.800): the published X11 head does not
+        //  yet raise VisibilityChanged on minimize (fixed in the platform tree,
+        //  commit 27053da4); this wiring lights up when the updated family
+        //  packages publish — verification is deferred until then.
+        MainWindow.VisibilityChanged += (_, e) =>
+        {
+            if (e.Visible)
+            {
+                global::CodeBrix.Platform.GameEngine.Engine.Instance.Resume();
+            }
+            else
+            {
+                global::CodeBrix.Platform.GameEngine.Engine.Instance.Pause();
+            }
+        };
+
         MainWindow.Activate();
     }
 

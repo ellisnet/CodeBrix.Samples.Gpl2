@@ -15,12 +15,14 @@
     <Project Path="src/libs/Doom.Brix.Game/Doom.Brix.Game.csproj" />
     <Project Path="src/libs/Doom.Brix.GameEngine/Doom.Brix.GameEngine.csproj" />
     <Project Path="src/libs/Doom.Brix.Settings/Doom.Brix.Settings.csproj" />
+    <Project Path="src/libs/Doom.Brix.Synth/Doom.Brix.Synth.csproj" />
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="tests/libs/Doom.Brix.Assets.Tests/Doom.Brix.Assets.Tests.csproj" />
     <Project Path="tests/libs/Doom.Brix.Game.Tests/Doom.Brix.Game.Tests.csproj" />
     <Project Path="tests/libs/Doom.Brix.GameEngine.Tests/Doom.Brix.GameEngine.Tests.csproj" />
     <Project Path="tests/libs/Doom.Brix.Settings.Tests/Doom.Brix.Settings.Tests.csproj" />
+    <Project Path="tests/libs/Doom.Brix.Synth.Tests/Doom.Brix.Synth.Tests.csproj" />
   </Folder>
   <!-- TEMPORARY: the CodeBrix.Platform.GameEngine packages are not published yet, so
        Doom.Brix.Game project-references the sibling ~/GitHome checkout of the

@@ -1,5 +1,49 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+
+    <!-- Keep a distinct RootNamespace (not the app's "Wolfenstein.Brix") so the transitive
+         CodeBrix.Platform reference does not generate a duplicate GlobalStaticResources. -->
+    <RootNamespace>Wolfenstein.Brix.Game</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Wolfenstein.Brix.GameEngine\Wolfenstein.Brix.GameEngine.csproj" />
+    <!-- The sqlite-backed IWolfStorage (SqliteWolfStorage) persists config, save
+         slots and high scores through Wolfenstein.Brix.Settings' SettingsService,
+         so the game writes no files of its own. This is a plain managed reference
+         to the settings facade; SettingsStore remains the sole owner of the sqlite
+         handle (the CodeBrix.Sqlite package reference lives only in
+         Wolfenstein.Brix.Settings). -->
+    <ProjectReference Include="..\Wolfenstein.Brix.Settings\Wolfenstein.Brix.Settings.csproj" />
+  </ItemGroup>
+
+  <!-- The upstream license texts and the repo's notices file ride into every
+       head's output folder (Content items marked copy-to-output flow
+       transitively through ProjectReference), so a distributed build carries
+       its own compliance set. -->
+  <ItemGroup>
+    <Content Include="..\..\..\LICENSE_CSharpWolfenstein.txt" Link="ThirdPartyAssets\LICENSE_CSharpWolfenstein.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\LICENSE_Wolf3D-iOS.txt" Link="ThirdPartyAssets\LICENSE_Wolf3D-iOS.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\LICENSE_NukedOPL3.txt" Link="ThirdPartyAssets\LICENSE_NukedOPL3.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\..\THIRD-PARTY-NOTICES.txt" Link="ThirdPartyAssets\THIRD-PARTY-NOTICES.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- TEMPORARY: the CodeBrix.Platform.GameEngine packages are not published yet, so
+       these are local project references into the sibling ~/GitHome checkout of the
+       CodeBrix.Platform.GameEngine repo. Replace both with the
+       CodeBrix.Platform.GameEngine[.Host].ApacheLicenseForever PackageReferences (and
+       drop the matching entries from Wolfenstein.Brix.slnx) when the family NuGets publish. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\..\CodeBrix.Platform.GameEngine\src\CodeBrix.Platform.GameEngine\CodeBrix.Platform.GameEngine.csproj" />
+    <ProjectReference Include="..\..\..\..\..\CodeBrix.Platform.GameEngine\src\CodeBrix.Platform.GameEngine.Host\CodeBrix.Platform.GameEngine.Host.csproj" />
+  </ItemGroup>
 </Project>

@@ -14,7 +14,7 @@
 //
 
 using System;
-using MeltySynth;
+using Doom.Brix.Synth;
 
 namespace ManagedDoom.Audio;
 

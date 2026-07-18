@@ -21,7 +21,23 @@ public sealed partial class MainPage : Page
 
         this.InitializeComponent();
 
-        Loaded += (_, _) => InitializeBrowser();
+        //The embedded browser belongs to Assets Mode only. Skipping its
+        //  initialization in Game Mode both saves the WebView startup cost and
+        //  keeps its native focus proxy from stealing keyboard focus from the
+        //  game canvas.
+        Loaded += (_, _) =>
+        {
+            if (DataContext is MainViewModel { IsGameMode: false })
+            {
+                InitializeBrowser();
+            }
+        };
+
+        //Fires (on the UI thread) once the game canvas first renders with a real
+        //  size — with the canvas inside the Game Mode grid, that is when Game
+        //  Mode first becomes visible. The view model boots the game host then.
+        GameCanvas.FirstStarted += (_, _) =>
+            (DataContext as MainViewModel)?.CanvasFirstStart(GameCanvas);
     }
 
     private void InitializeBrowser()

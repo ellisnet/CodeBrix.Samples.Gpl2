@@ -3,6 +3,6 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MeltySynth" Version="2.4.1" />
+    <ProjectReference Include="..\Doom.Brix.Synth\Doom.Brix.Synth.csproj" />
   </ItemGroup>
 </Project>

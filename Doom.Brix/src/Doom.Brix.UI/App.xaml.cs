@@ -58,7 +58,7 @@ public partial class App : Application
         //  to game time. Doom's own in-game pause is separate game logic and
         //  unaffected. Both calls are idempotent, and a pause that lands before
         //  the game host initializes simply starts the loop parked.
-        //KNOWN PLATFORM GAP (CodeBrix.Platform 1.0.197.800): the X11 head raises
+        //KNOWN PLATFORM GAP (CodeBrix.Platform 1.0.199.897): the X11 head raises
         //  VisibilityChanged only from VisibilityNotify (obscured-state) events and
         //  ignores UnmapNotify, so minimizing on X11 does not fire this event (and
         //  raises no Activated/Deactivated either) — the game keeps running

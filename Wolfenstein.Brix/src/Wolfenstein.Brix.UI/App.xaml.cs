@@ -59,7 +59,7 @@ public partial class App : Application
         //  ESC-menu pause is separate game logic and unaffected. Both calls are
         //  idempotent, and a pause that lands before the game host initializes
         //  simply starts the loop parked.
-        //NOTE (CodeBrix.Platform 1.0.197.800): the published X11 head does not
+        //NOTE (CodeBrix.Platform 1.0.199.897): the published X11 head does not
         //  yet raise VisibilityChanged on minimize (fixed in the platform tree,
         //  commit 27053da4); this wiring lights up when the updated family
         //  packages publish — verification is deferred until then.

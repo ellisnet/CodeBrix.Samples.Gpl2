@@ -1,6 +1,6 @@
 // Doom.Brix — GPLv2 (see the repo LICENSE); the CodeBrix.Platform.GameEngine
 // replacement for managed-doom's Silk user-input backend. BuildTicCmd ports
-// upstream SilkUserInput.BuildTicCmd (keyboard path; v1 is keyboard-only).
+// upstream SilkUserInput.BuildTicCmd (keyboard and mouse paths).
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,24 +15,32 @@
 
 using System;
 using System.Collections.Generic;
+using CodeBrix.Platform.GameEngine.Host.Input.Mouse;
 using CodeBrix.Platform.GameEngine.Input;
 using CodeBrix.Platform.GameEngine.Input.Keyboard;
+using CodeBrix.Platform.GameEngine.Input.Mouse;
 using ManagedDoom;
 using ManagedDoom.UserInput;
 
 namespace Doom.Brix.Game;
 
 /// <summary>
-/// The game core's <see cref="IUserInput"/> backend. Two complementary paths, both on
+/// The game core's <see cref="IUserInput"/> backend. Three complementary paths, all on
 /// the game-loop thread: key EVENTS (menus, typing, weapon changes) arrive from the
 /// <see cref="KeyboardEventPoller"/> during the host's per-tic input poll and queue up
 /// for <see cref="PostPendingEventsTo"/>; held-key STATE for movement
-/// (<see cref="BuildTicCmd"/>) polls the lock-free keyboard adapter directly.
+/// (<see cref="BuildTicCmd"/>) polls the lock-free keyboard adapter directly; and MOUSE
+/// look/buttons come from the host's <see cref="RelativeMouseSession"/> (per-tic
+/// deltas while the core has the mouse grabbed) plus the engine's mouse adapter
+/// (button state). Doom's core decides when to grab/release via
+/// <see cref="GrabMouse"/>/<see cref="ReleaseMouse"/>.
 /// </summary>
 internal sealed class CodeBrixUserInput : IUserInput, IDisposable
 {
     private readonly Config config;
     private readonly IKeyboardAdapter keyboard;
+    private readonly RelativeMouseSession mouseSession;
+    private readonly IMouseAdapter mouse;
     private readonly Queue<QueuedKey> pendingKeys = new Queue<QueuedKey>();
     private readonly bool[] weaponKeys = new bool[7];
     private int turnHeld;
@@ -49,9 +57,10 @@ internal sealed class CodeBrixUserInput : IUserInput, IDisposable
         public bool Down { get; }
     }
 
-    public CodeBrixUserInput(Config config)
+    public CodeBrixUserInput(Config config, RelativeMouseSession mouseSession)
     {
         this.config = config;
+        this.mouseSession = mouseSession;
 
         var poller = KeyboardEventPoller.Instance;
         if (poller == null)
@@ -63,6 +72,8 @@ internal sealed class CodeBrixUserInput : IUserInput, IDisposable
         keyboard = poller.Adapter;
         poller.StartMonitoringAllKeys();
         poller.KeyDown += OnKeyEvent;
+
+        mouse = MouseEventPoller.Instance?.Adapter;
     }
 
     private void OnKeyEvent(KeyDownEventArgs args)
@@ -209,6 +220,31 @@ internal sealed class CodeBrixUserInput : IUserInput, IDisposable
             }
         }
 
+        // Mouse look, as upstream: sensitivity-scaled per-tic deltas turn (or
+        // strafe) horizontally and move vertically; y is dropped when the
+        // config disables it.
+        if (mouseSession != null && mouseSession.IsActive)
+        {
+            var (deltaX, deltaY) = mouseSession.ConsumeDelta();
+            if (config.mouse_disableyaxis)
+            {
+                deltaY = 0;
+            }
+
+            var ms = 0.5F * config.mouse_sensitivity;
+            var mx = (int)MathF.Round(ms * deltaX);
+            var my = (int)MathF.Round(ms * -deltaY);
+            forward += my;
+            if (strafe)
+            {
+                side += mx * 2;
+            }
+            else
+            {
+                cmd.AngleTurn -= (short)(mx * 0x8);
+            }
+        }
+
         if (forward > PlayerBehavior.MaxMove)
         {
             forward = PlayerBehavior.MaxMove;
@@ -243,20 +279,42 @@ internal sealed class CodeBrixUserInput : IUserInput, IDisposable
             }
         }
 
+        if (mouse != null && mouseSession != null && mouseSession.IsActive)
+        {
+            foreach (var mouseButton in binding.MouseButtons)
+            {
+                var mapped = ToMouseButton(mouseButton);
+                if (mapped != MouseButton.None && mouse.PressedButtons.Contains(mapped))
+                {
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 
-    public void Reset() => pendingKeys.Clear();
-
-    // v1 is keyboard-only; mouse look arrives with the post-publish
-    // RelativeMouseSession work.
-    public void GrabMouse()
+    private static MouseButton ToMouseButton(DoomMouseButton button) => button switch
     {
+        DoomMouseButton.Mouse1 => MouseButton.Left,
+        DoomMouseButton.Mouse2 => MouseButton.Right,
+        DoomMouseButton.Mouse3 => MouseButton.Middle,
+        _ => MouseButton.None,
+    };
+
+    public void Reset()
+    {
+        pendingKeys.Clear();
+        mouseSession?.ConsumeDelta();
     }
 
-    public void ReleaseMouse()
-    {
-    }
+    // Doom's core drives these from its own grab policy (in-game with focus =>
+    // grab; menus/paused/unfocused => release). On a platform head without
+    // relative-mouse support the session stays inactive (it logs once) and the
+    // game simply runs keyboard-only.
+    public void GrabMouse() => mouseSession?.Begin();
+
+    public void ReleaseMouse() => mouseSession?.End();
 
     public int MaxMouseSensitivity => 15;
 

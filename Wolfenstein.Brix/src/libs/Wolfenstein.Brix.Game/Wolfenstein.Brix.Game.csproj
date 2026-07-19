@@ -37,13 +37,9 @@
     </Content>
   </ItemGroup>
 
-  <!-- TEMPORARY: the CodeBrix.Platform.GameEngine packages are not published yet, so
-       these are local project references into the sibling ~/GitHome checkout of the
-       CodeBrix.Platform.GameEngine repo. Replace both with the
-       CodeBrix.Platform.GameEngine[.Host].ApacheLicenseForever PackageReferences (and
-       drop the matching entries from Wolfenstein.Brix.slnx) when the family NuGets publish. -->
+  <!-- One package ships both the engine and host assemblies (CodeBrix.Platform.GameEngine
+       and CodeBrix.Platform.GameEngine.Host); there is no separate .Host package. -->
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\CodeBrix.Platform.GameEngine\src\CodeBrix.Platform.GameEngine\CodeBrix.Platform.GameEngine.csproj" />
-    <ProjectReference Include="..\..\..\..\..\CodeBrix.Platform.GameEngine\src\CodeBrix.Platform.GameEngine.Host\CodeBrix.Platform.GameEngine.Host.csproj" />
+    <PackageReference Include="CodeBrix.Platform.GameEngine.MitLicenseForever" Version="1.0.199.1025" />
   </ItemGroup>
 </Project>

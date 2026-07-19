@@ -59,4 +59,34 @@ public class AssetUrlClassifierTests
         AssetUrlClassifier.GetUrlFileName("https://example.com/dir/file.zip?a=1#top").Should().Be("file.zip");
         AssetUrlClassifier.GetUrlFileName("https://example.com/dir/").Should().BeNull();
     }
+
+    [Theory]
+    [InlineData("https://example.com/mirror/doom19s.zip", "doom19s.zip")]
+    [InlineData("https://example.com/mirror/doom19s.zip", "doom19s (3).zip")]
+    [InlineData("https://example.com/download.php?id=42", "doom19s.zip")]
+    [InlineData("https://example.com/download.php?id=42", "DOOM19S.ZIP")]
+    [InlineData("https://example.com/mirror/doom19s.zip", "unrelated-name.zip")]
+    [InlineData("https://example.com/mirror/doom19s.zip", null)]
+    public void IsAssetDownload_accepts_by_suggested_name_or_url(string url, string suggestedFileName) =>
+        AssetUrlClassifier.IsAssetDownload(url, suggestedFileName).Should().BeTrue();
+
+    [Theory]
+    [InlineData("https://example.com/other-file.zip", "other-file.zip")]
+    [InlineData("https://example.com/download.php?id=42", "setup.exe")]
+    [InlineData("https://example.com/download.php?id=42", null)]
+    [InlineData(null, null)]
+    public void IsAssetDownload_refuses_everything_else(string url, string suggestedFileName) =>
+        AssetUrlClassifier.IsAssetDownload(url, suggestedFileName).Should().BeFalse();
+
+    [Theory]
+    [InlineData("doom19s (1).zip", "doom19s.zip")]
+    [InlineData("doom19s (27).zip", "doom19s.zip")]
+    [InlineData("doom19s.zip", "doom19s.zip")]
+    [InlineData("doom19s (x).zip", "doom19s (x).zip")]
+    [InlineData("doom19s ().zip", "doom19s ().zip")]
+    [InlineData(" (1).zip", " (1).zip")]
+    [InlineData("archive (1)", "archive")]
+    [InlineData(null, null)]
+    public void StripCollisionSuffix_removes_only_the_browser_suffix(string fileName, string expected) =>
+        AssetUrlClassifier.StripCollisionSuffix(fileName).Should().Be(expected);
 }

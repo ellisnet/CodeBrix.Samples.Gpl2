@@ -15,6 +15,7 @@ using System;
 using System.IO;
 using CodeBrix.Platform.GameEngine.Audio;
 using CodeBrix.Platform.GameEngine.Host.Hosting;
+using CodeBrix.Platform.GameEngine.Host.Input.Mouse;
 using CodeBrix.Platform.GameEngine.Host.Rendering;
 using ManagedDoom;
 
@@ -42,6 +43,7 @@ public sealed class DoomGameHost : SoftwareRenderedGameHostBase
     private CodeBrixVideo video;
     private CodeBrixSound sound;
     private CodeBrixMusic music;
+    private RelativeMouseSession mouseSession;
     private CodeBrixUserInput userInput;
     private ManagedDoom.Doom doom;
     private bool gameCompleted;
@@ -106,7 +108,8 @@ public sealed class DoomGameHost : SoftwareRenderedGameHostBase
             FocusProbe = () => FocusProbe == null || FocusProbe(),
         };
         sound = new CodeBrixSound(config, content);
-        userInput = new CodeBrixUserInput(config);
+        mouseSession = new RelativeMouseSession(RenderSurface);
+        userInput = new CodeBrixUserInput(config, mouseSession);
 
         // Music needs the shipped SoundFont; when the file is missing (e.g. a
         // hand-trimmed deployment) the core substitutes its Null implementation
@@ -149,6 +152,12 @@ public sealed class DoomGameHost : SoftwareRenderedGameHostBase
         {
             userInput.Dispose();
             userInput = null;
+        }
+
+        if (mouseSession != null)
+        {
+            mouseSession.Dispose();
+            mouseSession = null;
         }
 
         if (music != null)

@@ -38,7 +38,6 @@ public class MainViewModel : SimpleViewModel
     private double _downloadProgress;
     private string _downloadStageText = string.Empty;
     private string _addressText = DoomAssetCatalog.DefaultBrowseUrl;
-    private string _currentPageUrl = DoomAssetCatalog.DefaultBrowseUrl;
     private bool _hasNavigated;
 
     /// <summary>Creates the view model and decides the starting mode.</summary>
@@ -286,57 +285,65 @@ public class MainViewModel : SimpleViewModel
         NavigateToUrl(DoomAssetCatalog.DefaultBrowseUrl);
     }
 
-    /// <summary>Tracks the page the user is on (for the address bar and the download Referer).</summary>
+    /// <summary>Tracks the page the user is on (for the address bar).</summary>
     public void SetCurrentBrowserUrl(string url)
     {
         if (string.IsNullOrWhiteSpace(url)) { return; }
 
-        _currentPageUrl = url;
         AddressText = url;
     }
 
     /// <summary>
-    /// The Assets Mode download policy, called for every navigation the
-    /// WebView starts. Returns true when the navigation must be CANCELED:
-    /// the permitted asset file (handed to the .Assets pipeline instead) and
-    /// any other download-looking link (refused with an explanation).
-    /// Ordinary page navigation returns false and passes through.
+    /// The Assets Mode download policy, called when the WebView starts a
+    /// download (page navigation is never intercepted). The one permitted
+    /// asset file is accepted: the browser downloads it into the returned
+    /// temp target path and the .Assets pipeline verifies/extracts it on
+    /// completion. Any other download returns false to be canceled, with an
+    /// explanation — as does a second download while one is in progress.
     /// </summary>
-    public bool HandleNavigationStarting(string url)
+    public bool HandleDownloadStarting(string url, string suggestedFileName, out string targetFilePath)
     {
-        if (string.IsNullOrWhiteSpace(url)) { return false; }
+        targetFilePath = null;
 
-        if (AssetUrlClassifier.IsAssetFileUrl(url))
-        {
-            if (!IsDownloading)
-            {
-                _ = InstallAssetsAsync(url);
-            }
-            return true;
-        }
-
-        if (AssetUrlClassifier.IsDownloadLikeUrl(url))
+        if (!AssetUrlClassifier.IsAssetDownload(url, suggestedFileName))
         {
             _ = ShowUnrecognizedDownloadCanceledAsync();
-            return true;
+            return false;
         }
 
-        return false;
+        if (IsDownloading) { return false; }
+
+        IsDownloading = true;
+        DownloadProgress = 0;
+        DownloadStageText = $"Downloading {DoomAssetCatalog.AssetFileName}…";
+        targetFilePath = DoomAssetPipeline.CreateTempDownloadPath();
+        return true;
+    }
+
+    /// <summary>Download progress for the accepted asset download.</summary>
+    public void OnAssetDownloadProgress(long bytesReceived) =>
+        DownloadProgress = Math.Clamp((double)bytesReceived / DoomAssetCatalog.AssetZipSize, 0d, 1d) * 100d;
+
+    /// <summary>The accepted asset download finished; verify and extract it.</summary>
+    public void OnAssetDownloadCompleted(string zipPath) => _ = InstallAssetsAsync(zipPath);
+
+    /// <summary>The accepted asset download failed or was interrupted.</summary>
+    public void OnAssetDownloadFailed()
+    {
+        IsDownloading = false;
+        _ = ShowInstallFailedAsync(AssetStage.Downloading);
     }
 
     #endregion
 
     #region | Asset installation pipeline |
 
-    private async Task InstallAssetsAsync(string url)
+    private async Task InstallAssetsAsync(string zipPath)
     {
-        IsDownloading = true;
-        DownloadProgress = 0;
-        DownloadStageText = $"Downloading {DoomAssetCatalog.AssetFileName}…";
         try
         {
             var progress = new Progress<AssetProgress>(OnAssetProgress);
-            await DoomAssetPipeline.InstallFromUrlAsync(url, _currentPageUrl, _assetsFolder,
+            await DoomAssetPipeline.InstallDownloadedZipAsync(zipPath, _assetsFolder,
                 progress, CancellationToken.None);
 
             //Assets Mode completed successfully: on to Game Mode.
@@ -348,7 +355,7 @@ public class MainViewModel : SimpleViewModel
         }
         catch (Exception)
         {
-            await ShowInstallFailedAsync(AssetStage.Downloading);
+            await ShowInstallFailedAsync(AssetStage.Verifying);
         }
         finally
         {

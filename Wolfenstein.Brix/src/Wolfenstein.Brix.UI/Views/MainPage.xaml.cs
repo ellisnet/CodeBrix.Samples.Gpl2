@@ -1,6 +1,9 @@
 using CodeBrix.Platform.Simple;
 using Wolfenstein.Brix.ViewModels;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.Web.WebView2.Core;
 using System;
 
 namespace Wolfenstein.Brix.Views;
@@ -37,21 +40,64 @@ public sealed partial class MainPage : Page
         //  size — with the canvas inside the Game Mode grid, that is when Game
         //  Mode first becomes visible. The view model boots the game host then.
         GameCanvas.FirstStarted += (_, _) =>
+        {
             (DataContext as MainViewModel)?.CanvasFirstStart(GameCanvas);
+            FocusGameCanvas();
+        };
+
+        //Keys reach the game only while the game surface holds keyboard focus,
+        //  and clicking the canvas moves focus off it — KeyDown then routes to
+        //  the focused element's ancestors, never the canvas, and the keyboard
+        //  goes dead until Tab restores focus. Hand focus straight back after
+        //  every click. handledEventsToo: true because the press may already be
+        //  marked handled.
+        GameCanvas.AddHandler(
+            UIElement.PointerReleasedEvent,
+            new PointerEventHandler((_, _) => FocusGameCanvas()),
+            handledEventsToo: true);
     }
 
-    private void InitializeBrowser()
+    //Defer to the dispatcher so focus lands after whatever took it from the
+    //  click finishes processing.
+    private void FocusGameCanvas() =>
+        DispatcherQueue.TryEnqueue(() => GameCanvas.Focus(FocusState.Programmatic));
+
+    private async void InitializeBrowser()
     {
         if (_browserInitialized || DataContext is not MainViewModel viewModel) { return; }
         _browserInitialized = true;
 
-        //Assets Mode download policy: the one permitted asset file (1wolf14.zip) is
-        //  intercepted here and downloaded/verified/extracted by the .Assets pipeline
-        //  instead; any other download-looking link is canceled with an explanation.
-        //  Ordinary page navigation passes through untouched.
-        Browser.NavigationStarting += (_, args) =>
+        //Assets Mode download policy (DownloadStarting, CodeBrix.Platform
+        //  1.0.199.897+): the one permitted asset file (1wolf14.zip) — recognized
+        //  by the download's suggested file name or URL, whichever mirror the
+        //  user found it on — is downloaded by the browser into a temp target
+        //  the .Assets pipeline verifies and extracts; any other download is
+        //  canceled with an explanation. Page navigation is never intercepted.
+        await Browser.EnsureCoreWebView2Async();
+        Browser.CoreWebView2.DownloadStarting += (_, args) =>
         {
-            if (viewModel.HandleNavigationStarting(args.Uri)) { args.Cancel = true; }
+            if (viewModel.HandleDownloadStarting(args.DownloadOperation.Uri,
+                    System.IO.Path.GetFileName(args.ResultFilePath), out var targetFilePath))
+            {
+                args.ResultFilePath = targetFilePath;
+                args.DownloadOperation.BytesReceivedChanged += (operation, _) =>
+                    viewModel.OnAssetDownloadProgress(operation.BytesReceived);
+                args.DownloadOperation.StateChanged += (operation, _) =>
+                {
+                    if (operation.State == CoreWebView2DownloadState.Completed)
+                    {
+                        viewModel.OnAssetDownloadCompleted(operation.ResultFilePath);
+                    }
+                    else if (operation.State == CoreWebView2DownloadState.Interrupted)
+                    {
+                        viewModel.OnAssetDownloadFailed();
+                    }
+                };
+            }
+            else
+            {
+                args.Cancel = true;
+            }
         };
 
         //Use CoreWebView2.Source (the authoritative current URL after redirects / user

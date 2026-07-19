@@ -73,23 +73,65 @@ public static class WolfensteinAssetPipeline
                     $"The game asset file could not be downloaded from '{url}'.", ex);
             }
 
-            // Hashing and decompression are pure CPU/disk work; keep them off the caller's (UI) thread.
-            await Task.Run(() =>
-            {
-                progress?.Report(new AssetProgress(AssetStage.Verifying, 0d));
-                VerifyDownloadedZip(zipPath, cancellationToken);
-                progress?.Report(new AssetProgress(AssetStage.Verifying, 1d));
-
-                progress?.Report(new AssetProgress(AssetStage.Extracting, 0d));
-                ExtractAssets(zipPath, assetsFolderPath, cancellationToken);
-                progress?.Report(new AssetProgress(AssetStage.Extracting, 1d));
-            }, cancellationToken).ConfigureAwait(false);
+            await VerifyAndExtractAsync(zipPath, assetsFolderPath, progress, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
             try { Directory.Delete(tempDirectory, recursive: true); } catch { /* best effort */ }
         }
     }
+
+    /// <summary>
+    /// A fresh temp target path (ending in <see cref="WolfensteinAssetCatalog.AssetFileName"/>,
+    /// directory created) for a download the browser performs itself; hand the
+    /// downloaded file to <see cref="InstallDownloadedZipAsync"/>, which cleans
+    /// the directory up again.
+    /// </summary>
+    public static string CreateTempDownloadPath()
+    {
+        var tempDirectory = Path.Combine(Path.GetTempPath(), "Wolfenstein.Brix", Path.GetRandomFileName());
+        Directory.CreateDirectory(tempDirectory);
+        return Path.Combine(tempDirectory, WolfensteinAssetCatalog.AssetFileName);
+    }
+
+    /// <summary>
+    /// Runs the pipeline's verify → extract stages over an already-downloaded
+    /// copy of the asset zip (the browser downloaded it to a
+    /// <see cref="CreateTempDownloadPath"/> target). The zip's containing
+    /// directory is deleted afterwards, success or failure. Failures throw
+    /// <see cref="AssetPipelineException"/> carrying the stage that failed.
+    /// </summary>
+    public static async Task InstallDownloadedZipAsync(string zipPath, string assetsFolderPath,
+        IProgress<AssetProgress> progress, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(assetsFolderPath))
+        {
+            throw new ArgumentException("An assets folder path is required", nameof(assetsFolderPath));
+        }
+
+        try
+        {
+            await VerifyAndExtractAsync(zipPath, assetsFolderPath, progress, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            try { Directory.Delete(Path.GetDirectoryName(zipPath), recursive: true); } catch { /* best effort */ }
+        }
+    }
+
+    // Hashing and decompression are pure CPU/disk work; keep them off the caller's (UI) thread.
+    private static Task VerifyAndExtractAsync(string zipPath, string assetsFolderPath,
+        IProgress<AssetProgress> progress, CancellationToken cancellationToken) =>
+        Task.Run(() =>
+        {
+            progress?.Report(new AssetProgress(AssetStage.Verifying, 0d));
+            VerifyDownloadedZip(zipPath, cancellationToken);
+            progress?.Report(new AssetProgress(AssetStage.Verifying, 1d));
+
+            progress?.Report(new AssetProgress(AssetStage.Extracting, 0d));
+            ExtractAssets(zipPath, assetsFolderPath, cancellationToken);
+            progress?.Report(new AssetProgress(AssetStage.Extracting, 1d));
+        }, cancellationToken);
 
     /// <summary>
     /// Verifies the downloaded zip is the authentic 1wolf14.zip (size,

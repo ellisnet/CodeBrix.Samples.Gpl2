@@ -22,12 +22,4 @@
     <Project Path="tests/libs/Wolfenstein.Brix.GameEngine.Tests/Wolfenstein.Brix.GameEngine.Tests.csproj" />
     <Project Path="tests/libs/Wolfenstein.Brix.Settings.Tests/Wolfenstein.Brix.Settings.Tests.csproj" />
   </Folder>
-  <!-- TEMPORARY: the CodeBrix.Platform.GameEngine packages are not published yet, so
-       Wolfenstein.Brix.Game project-references the sibling ~/GitHome checkout of the
-       CodeBrix.Platform.GameEngine repo. Remove this folder (and switch
-       Wolfenstein.Brix.Game to the PackageReferences) when the family NuGets publish. -->
-  <Folder Name="/TEMPORARY-GameEngine/">
-    <Project Path="../../CodeBrix.Platform.GameEngine/src/CodeBrix.Platform.GameEngine/CodeBrix.Platform.GameEngine.csproj" />
-    <Project Path="../../CodeBrix.Platform.GameEngine/src/CodeBrix.Platform.GameEngine.Host/CodeBrix.Platform.GameEngine.Host.csproj" />
-  </Folder>
 </Solution>

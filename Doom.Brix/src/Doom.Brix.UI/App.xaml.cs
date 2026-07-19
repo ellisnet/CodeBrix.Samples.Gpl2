@@ -58,11 +58,10 @@ public partial class App : Application
         //  to game time. Doom's own in-game pause is separate game logic and
         //  unaffected. Both calls are idempotent, and a pause that lands before
         //  the game host initializes simply starts the loop parked.
-        //KNOWN PLATFORM GAP (CodeBrix.Platform 1.0.199.897): the X11 head raises
-        //  VisibilityChanged only from VisibilityNotify (obscured-state) events and
-        //  ignores UnmapNotify, so minimizing on X11 does not fire this event (and
-        //  raises no Activated/Deactivated either) — the game keeps running
-        //  minimized there until the platform wires iconification to visibility.
+        //Minimize works on X11 since CodeBrix.Platform 1.0.199.897 (commit
+        //  27053da4 wired iconification/_NET_WM_STATE into VisibilityChanged);
+        //  earlier versions ignored UnmapNotify and kept the game running while
+        //  minimized. Workspace switches deliberately do NOT pause.
         MainWindow.VisibilityChanged += (_, e) =>
         {
             if (e.Visible)

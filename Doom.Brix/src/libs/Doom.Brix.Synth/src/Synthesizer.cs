@@ -329,7 +329,7 @@ namespace Doom.Brix.Synth //was previously: MeltySynth
 
             var presetId = (channelInfo.BankNumber << 16) | channelInfo.PatchNumber;
 
-            Preset preset;
+            Preset? preset;
             if (!presetLookup.TryGetValue(presetId, out preset))
             {
                 // Try fallback to the GM sound set.
@@ -344,20 +344,24 @@ namespace Doom.Brix.Synth //was previously: MeltySynth
                 }
             }
 
-            foreach (var presetRegion in preset.RegionArray)
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+            if (preset != null)
             {
-                if (presetRegion.Contains(key, velocity))
+                foreach (var presetRegion in preset.RegionArray)
                 {
-                    foreach (var instrumentRegion in presetRegion.Instrument.RegionArray)
+                    if (presetRegion.Contains(key, velocity))
                     {
-                        if (instrumentRegion.Contains(key, velocity))
+                        foreach (var instrumentRegion in presetRegion.Instrument.RegionArray)
                         {
-                            var regionPair = new RegionPair(presetRegion, instrumentRegion);
-
-                            var voice = voices.RequestNew(instrumentRegion, channel);
-                            if (voice != null)
+                            if (instrumentRegion.Contains(key, velocity))
                             {
-                                voice.Start(regionPair, channel, key, velocity);
+                                var regionPair = new RegionPair(presetRegion, instrumentRegion);
+
+                                var voice = voices.RequestNew(instrumentRegion, channel);
+                                if (voice != null)
+                                {
+                                    voice.Start(regionPair, channel, key, velocity);
+                                }
                             }
                         }
                     }

@@ -17,6 +17,7 @@
 using System;
 using CodeBrix.Platform.GameEngine.Input;
 using CodeBrix.Platform.GameEngine.Input.Keyboard;
+using CodeBrix.Platform.GameEngine.Sdl2.Gamepad;
 using Wolfenstein.Brix.GameEngine.Logic;
 
 namespace Wolfenstein.Brix.Game;
@@ -27,6 +28,10 @@ namespace Wolfenstein.Brix.Game;
 /// weapons) plus edge events for the menus (arrows, Enter, Escape,
 /// typed characters, Backspace).
 /// </summary>
+/// <remarks>
+/// A connected controller feeds the same input alongside the keyboard; see
+/// <see cref="WolfGamepadInput"/>.
+/// </remarks>
 internal sealed class WolfUserInput : IDisposable
 {
     private const int VkBack = 0x08;
@@ -62,6 +67,8 @@ internal sealed class WolfUserInput : IDisposable
     private const int RunTurnFine = 5 * WolfMath.Ang1;
 
     private readonly IKeyboardAdapter keyboard;
+    private readonly GameSession session;
+    private readonly WolfGamepadInput gamepad;
 
     // Edges gathered by the poller during this tic's input poll; both
     // sides run on the game-loop thread, so no synchronization needed.
@@ -72,8 +79,11 @@ internal sealed class WolfUserInput : IDisposable
     private bool edgeBackspace;
     private char typedChar;
 
-    public WolfUserInput()
+    public WolfUserInput(GameSession gameSession, SdlGamepadManager gamepadManager)
     {
+        session = gameSession;
+        gamepad = new WolfGamepadInput(gamepadManager);
+
         var poller = KeyboardEventPoller.Instance;
         if (poller == null)
         {
@@ -126,10 +136,14 @@ internal sealed class WolfUserInput : IDisposable
         }
     }
 
-    /// <summary>Samples held keys and drains this tic's edges into one input.</summary>
+    /// <summary>Samples held keys and the controller, and drains this tic's edges into one input.</summary>
     public SessionInput BuildInput()
     {
-        var run = keyboard.IsDown(VkShift) || keyboard.IsDown(VkLShift) || keyboard.IsDown(VkRShift);
+        // All-default when no controller is connected, which makes every fold-in below
+        // a no-op.
+        var pad = gamepad.Sample(session?.Logic?.Player);
+
+        var run = keyboard.IsDown(VkShift) || keyboard.IsDown(VkLShift) || keyboard.IsDown(VkRShift) || pad.Run;
         var move = run ? RunMove : WalkMove;
         var turn = run ? RunTurnFine : TurnFine;
 
@@ -165,9 +179,17 @@ internal sealed class WolfUserInput : IDisposable
             game.AngleTurn -= turn;
         }
 
+        // The controller's analog axes, folded in on the same terms as the keys: the
+        // left stick moves and strafes, the right stick's X turns. Positive AngleTurn is
+        // counter-clockwise, so pushing the stick right subtracts. The right stick's Y
+        // is deliberately unused; Wolfenstein has no look axis to spend it on.
+        game.ForwardMove += (int)MathF.Round(pad.Forward * move);
+        game.SideMove += (int)MathF.Round(pad.Side * move);
+        game.AngleTurn -= (int)MathF.Round(pad.Turn * turn);
+
         game.Attack = keyboard.IsDown(VkControl) ||
-            keyboard.IsDown(VkLControl) || keyboard.IsDown(VkRControl);
-        game.Use = keyboard.IsDown(VkSpace);
+            keyboard.IsDown(VkLControl) || keyboard.IsDown(VkRControl) || pad.Fire;
+        game.Use = keyboard.IsDown(VkSpace) || pad.Use;
 
         for (var slot = 0; slot < 4; slot++)
         {
@@ -178,13 +200,20 @@ internal sealed class WolfUserInput : IDisposable
             }
         }
 
+        // A number key wins over the shoulder buttons: it names one weapon, where the
+        // shoulders only say "the next one".
+        if (game.WeaponSlot == 0)
+        {
+            game.WeaponSlot = pad.WeaponSlot;
+        }
+
         var input = new SessionInput
         {
             Game = game,
-            MenuUp = edgeUp,
-            MenuDown = edgeDown,
-            MenuActivate = edgeActivate,
-            MenuBack = edgeBack,
+            MenuUp = edgeUp || pad.MenuUp,
+            MenuDown = edgeDown || pad.MenuDown,
+            MenuActivate = edgeActivate || pad.MenuActivate,
+            MenuBack = edgeBack || pad.MenuBack,
             Backspace = edgeBackspace,
             TypedChar = typedChar,
         };

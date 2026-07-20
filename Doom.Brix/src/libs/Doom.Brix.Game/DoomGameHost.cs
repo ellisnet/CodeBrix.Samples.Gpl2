@@ -13,10 +13,14 @@
 
 using System;
 using System.IO;
+using CodeBrix.Platform.GameEngine;
 using CodeBrix.Platform.GameEngine.Audio;
 using CodeBrix.Platform.GameEngine.Host.Hosting;
 using CodeBrix.Platform.GameEngine.Host.Input.Mouse;
 using CodeBrix.Platform.GameEngine.Host.Rendering;
+using CodeBrix.Platform.GameEngine.Sdl2;
+using CodeBrix.Platform.GameEngine.Sdl2.Gamepad;
+using Doom.Brix.Settings;
 using ManagedDoom;
 
 namespace Doom.Brix.Game;
@@ -45,6 +49,7 @@ public sealed class DoomGameHost : SoftwareRenderedGameHostBase
     private CodeBrixMusic music;
     private RelativeMouseSession mouseSession;
     private CodeBrixUserInput userInput;
+    private SdlGamepadManager gamepads;
     private ManagedDoom.Doom doom;
     private bool gameCompleted;
 
@@ -84,6 +89,46 @@ public sealed class DoomGameHost : SoftwareRenderedGameHostBase
     public Func<bool> FocusProbe { get; set; }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Always on, with no setting to enable: a controller that is plugged in works, and
+    /// one that is not costs nothing. This never throws — when SDL2 or a controller is
+    /// missing the manager comes back reporting itself unavailable, and says why.
+    /// </remarks>
+    protected override void ConfigureGamepads()
+    {
+        // The engine's own status logging goes through ILogger at Information, which the
+        // host's default LogLevel.Warning filters out — so a WORKING controller would log
+        // nothing at all. Suppress it and report through the app's own log instead, which
+        // is also what the settings screen's sink replays.
+        gamepads = Engine.Instance.InitializeSdlGamepadManager(logStatus: false);
+        LogGamepadAvailability();
+    }
+
+    private void LogGamepadAvailability()
+    {
+        if (!gamepads.IsAvailable)
+        {
+            LoggingService.LogWarning($"Gamepad support unavailable: {gamepads.UnavailableReason}");
+            return;
+        }
+
+        if (gamepads.ConnectedAdapters.Count == 0)
+        {
+            LoggingService.LogInfo($"Gamepad support ready. {gamepads.GetNoControllersHint()}");
+            return;
+        }
+
+        foreach (var adapter in gamepads.ConnectedAdapters)
+        {
+            // The mapping string is logged deliberately: it is what reconciles a device's
+            // raw button and axis numbering with the standard layout, and it varies by
+            // transport (the same pad reports differently over Bluetooth than over USB).
+            LoggingService.LogInfo(
+                $"Gamepad connected: {adapter.Name} (id {adapter.GamepadId}); mapping: {adapter.GetMappingString()}");
+        }
+    }
+
+    /// <inheritdoc />
     protected override void ConfigureAudio()
         // Pin the shared device before any SoundChannel/StreamingAudioSource exists.
         => AudioSystem.Initialize(44100, 2);
@@ -109,7 +154,7 @@ public sealed class DoomGameHost : SoftwareRenderedGameHostBase
         };
         sound = new CodeBrixSound(config, content);
         mouseSession = new RelativeMouseSession(RenderSurface);
-        userInput = new CodeBrixUserInput(config, mouseSession);
+        userInput = new CodeBrixUserInput(config, mouseSession, gamepads);
 
         // Music needs the shipped SoundFont; when the file is missing (e.g. a
         // hand-trimmed deployment) the core substitutes its Null implementation
@@ -158,6 +203,15 @@ public sealed class DoomGameHost : SoftwareRenderedGameHostBase
         {
             mouseSession.Dispose();
             mouseSession = null;
+        }
+
+        if (gamepads != null)
+        {
+            // Detach before disposing: the engine's input poll reaches the manager
+            // through this property, and it must not find a disposed one there.
+            Engine.Instance.Input.GamepadManager = null;
+            gamepads.Dispose();
+            gamepads = null;
         }
 
         if (music != null)

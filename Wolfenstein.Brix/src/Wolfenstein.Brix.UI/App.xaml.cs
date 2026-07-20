@@ -75,6 +75,24 @@ public partial class App : Application
             }
         };
 
+        //Window activation restores keyboard focus to the game canvas. Focus is
+        //  handed to the canvas on first start and after every click on it, but
+        //  neither covers the window being deactivated and activated again:
+        //  alt-tabbing away and back, or raising the window from another
+        //  application, left the canvas unfocused, and keys then routed to the
+        //  focused element's ancestors instead of the game — the keyboard went
+        //  dead with nothing on screen to say so. A gamepad kept working
+        //  throughout, because SDL2 reads the device directly and needs no
+        //  window focus at all, which made the failure look stranger than it was.
+        MainWindow.Activated += (_, e) =>
+        {
+            if (e.WindowActivationState != global::Windows.UI.Core.CoreWindowActivationState.Deactivated &&
+                rootFrame.Content is Views.MainPage page)
+            {
+                page.OnWindowActivated();
+            }
+        };
+
         MainWindow.Activate();
     }
 

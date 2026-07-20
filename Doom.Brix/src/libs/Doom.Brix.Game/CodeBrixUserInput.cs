@@ -19,6 +19,7 @@ using CodeBrix.Platform.GameEngine.Host.Input.Mouse;
 using CodeBrix.Platform.GameEngine.Input;
 using CodeBrix.Platform.GameEngine.Input.Keyboard;
 using CodeBrix.Platform.GameEngine.Input.Mouse;
+using CodeBrix.Platform.GameEngine.Sdl2.Gamepad;
 using ManagedDoom;
 using ManagedDoom.UserInput;
 
@@ -35,12 +36,19 @@ namespace Doom.Brix.Game;
 /// (button state). Doom's core decides when to grab/release via
 /// <see cref="GrabMouse"/>/<see cref="ReleaseMouse"/>.
 /// </summary>
+/// <remarks>
+/// A fourth path joins the other three when a controller is connected: see
+/// <see cref="DoomGamepadInput"/>, which supplies analog movement to
+/// <see cref="BuildTicCmd"/> and synthesized menu key edges to
+/// <see cref="PostPendingEventsTo"/>.
+/// </remarks>
 internal sealed class CodeBrixUserInput : IUserInput, IDisposable
 {
     private readonly Config config;
     private readonly IKeyboardAdapter keyboard;
     private readonly RelativeMouseSession mouseSession;
     private readonly IMouseAdapter mouse;
+    private readonly DoomGamepadInput gamepad;
     private readonly Queue<QueuedKey> pendingKeys = new Queue<QueuedKey>();
     private readonly bool[] weaponKeys = new bool[7];
     private int turnHeld;
@@ -57,10 +65,11 @@ internal sealed class CodeBrixUserInput : IUserInput, IDisposable
         public bool Down { get; }
     }
 
-    public CodeBrixUserInput(Config config, RelativeMouseSession mouseSession)
+    public CodeBrixUserInput(Config config, RelativeMouseSession mouseSession, SdlGamepadManager gamepadManager)
     {
         this.config = config;
         this.mouseSession = mouseSession;
+        gamepad = new DoomGamepadInput(gamepadManager);
 
         var poller = KeyboardEventPoller.Instance;
         if (poller == null)
@@ -108,6 +117,14 @@ internal sealed class CodeBrixUserInput : IUserInput, IDisposable
             doom.PostEvent(new DoomEvent(
                 queued.Down ? EventType.KeyDown : EventType.KeyUp, queued.Key));
         }
+
+        // The controller is sampled here, at the front of the tic, so the sample that
+        // BuildTicCmd reads later in the same tic is this tic's — the keyboard adapter
+        // it reads alongside was refreshed moments ago by the same input poll.
+        gamepad.BeginTic(
+            DoomGamepadInput.IsMenuNavigationLive(doom),
+            doom.Game?.World?.ConsolePlayer);
+        gamepad.PostPendingEventsTo(doom);
     }
 
     public void BuildTicCmd(TicCmd cmd)
@@ -123,6 +140,10 @@ internal sealed class CodeBrixUserInput : IUserInput, IDisposable
         var keyRun = IsPressed(config.key_run);
         var keyStrafe = IsPressed(config.key_strafe);
 
+        // Sampled at the front of this tic by PostPendingEventsTo; all zero when no
+        // controller is connected, which makes every fold-in below a no-op.
+        var pad = gamepad.Sample;
+
         for (var i = 0; i < weaponKeys.Length; i++)
         {
             weaponKeys[i] = keyboard.IsDown(0x31 + i); // The top-row 1..7 keys.
@@ -131,7 +152,7 @@ internal sealed class CodeBrixUserInput : IUserInput, IDisposable
         cmd.Clear();
 
         var strafe = keyStrafe;
-        var speed = keyRun ? 1 : 0;
+        var speed = keyRun || pad.Run ? 1 : 0;
         var forward = 0;
         var side = 0;
 
@@ -200,24 +221,56 @@ internal sealed class CodeBrixUserInput : IUserInput, IDisposable
             side += PlayerBehavior.SideMove[speed];
         }
 
-        if (keyFire)
+        // The controller's analog axes, folded in on the same terms as the keys: the
+        // left stick moves and strafes, the right stick's X turns. Analog needs no
+        // equivalent of the keyboard's slow-turn ramp (turnSpeed above) — a partly
+        // pushed stick IS the slow turn — so it scales by speed directly. The right
+        // stick's Y is deliberately unused; Doom has no look axis to spend it on.
+        if (pad.Forward != 0)
+        {
+            forward += (int)MathF.Round(pad.Forward * PlayerBehavior.ForwardMove[speed]);
+        }
+        if (pad.Side != 0)
+        {
+            side += (int)MathF.Round(pad.Side * PlayerBehavior.SideMove[speed]);
+        }
+        if (pad.Turn != 0)
+        {
+            cmd.AngleTurn -= (short)(int)MathF.Round(pad.Turn * PlayerBehavior.AngleTurn[speed]);
+        }
+
+        if (keyFire || pad.Fire)
         {
             cmd.Buttons |= TicCmdButtons.Attack;
         }
 
-        if (keyUse)
+        if (keyUse || pad.Use)
         {
             cmd.Buttons |= TicCmdButtons.Use;
         }
 
+        var weaponSlot = -1;
         for (var i = 0; i < weaponKeys.Length; i++)
         {
             if (weaponKeys[i])
             {
-                cmd.Buttons |= TicCmdButtons.Change;
-                cmd.Buttons |= (byte)(i << TicCmdButtons.WeaponShift);
+                weaponSlot = i;
                 break;
             }
+        }
+
+        // A number key wins over the shoulder buttons: it names one weapon, where the
+        // shoulders only say "the next one". The sample's slot is one-based so that a
+        // default (no controller) sample means "change nothing".
+        if (weaponSlot < 0 && pad.WeaponSlot > 0)
+        {
+            weaponSlot = pad.WeaponSlot - 1;
+        }
+
+        if (weaponSlot >= 0)
+        {
+            cmd.Buttons |= TicCmdButtons.Change;
+            cmd.Buttons |= (byte)(weaponSlot << TicCmdButtons.WeaponShift);
         }
 
         // Mouse look, as upstream: sensitivity-scaled per-tic deltas turn (or
@@ -306,6 +359,7 @@ internal sealed class CodeBrixUserInput : IUserInput, IDisposable
     {
         pendingKeys.Clear();
         mouseSession?.ConsumeDelta();
+        gamepad.Reset();
     }
 
     // Doom's core drives these from its own grab policy (in-game with focus =>

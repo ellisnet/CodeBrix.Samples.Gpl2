@@ -57,6 +57,21 @@ public sealed partial class MainPage : Page
             handledEventsToo: true);
     }
 
+    //Called by the app when the window is activated. The canvas keeps keyboard
+    //  focus across a click (handled above) and gets it on first start, but
+    //  nothing restored it when the window itself was deactivated and activated
+    //  again — alt-tabbing away and back, or raising the window from another
+    //  application, left the canvas unfocused and the keyboard silently dead
+    //  until the player clicked. Game Mode only: in Assets Mode the embedded
+    //  browser owns the keyboard, and stealing focus would break typing in it.
+    internal void OnWindowActivated()
+    {
+        if (DataContext is MainViewModel { IsGameMode: true })
+        {
+            FocusGameCanvas();
+        }
+    }
+
     //Defer to the dispatcher so focus lands after whatever took it from the
     //  click finishes processing.
     private void FocusGameCanvas() =>

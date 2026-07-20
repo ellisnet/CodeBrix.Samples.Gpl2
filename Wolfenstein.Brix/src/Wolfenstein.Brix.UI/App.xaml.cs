@@ -59,7 +59,7 @@ public partial class App : Application
         //  ESC-menu pause is separate game logic and unaffected. Both calls are
         //  idempotent, and a pause that lands before the game host initializes
         //  simply starts the loop parked.
-        //Minimize works on X11 since CodeBrix.Platform 1.0.199.897 (commit
+        //Minimize works on X11 since CodeBrix.Platform 1.0.201.336 (commit
         //  27053da4 wired iconification/_NET_WM_STATE into VisibilityChanged);
         //  earlier versions ignored UnmapNotify and kept the game running while
         //  minimized. Workspace switches deliberately do NOT pause.

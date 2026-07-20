@@ -45,6 +45,6 @@
   <!-- One package ships both the engine and host assemblies (CodeBrix.Platform.GameEngine
        and CodeBrix.Platform.GameEngine.Host); there is no separate .Host package. -->
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Platform.GameEngine.MitLicenseForever" Version="1.0.201.374" />
+    <PackageReference Include="CodeBrix.Platform.GameEngine.MitLicenseForever" Version="1.0.201.518" />
   </ItemGroup>
 </Project>

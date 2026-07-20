@@ -19,7 +19,7 @@
          suite; test-only. CodeBrix.Audio provides the WAV reader (ReverbTest) and
          the reference SF2 reader (the *_NAudio tests). -->
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
-    <PackageReference Include="CodeBrix.Audio.MitLicenseForever" Version="1.0.199.38" />
+    <PackageReference Include="CodeBrix.Audio.MitLicenseForever" Version="1.0.201.77" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageReference Include="SilverAssertions.ApacheLicenseForever" Version="1.0.164.180" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">

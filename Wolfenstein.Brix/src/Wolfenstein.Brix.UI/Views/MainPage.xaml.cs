@@ -83,7 +83,7 @@ public sealed partial class MainPage : Page
         _browserInitialized = true;
 
         //Assets Mode download policy (DownloadStarting, CodeBrix.Platform
-        //  1.0.201.336+): the one permitted asset file (1wolf14.zip) — recognized
+        //  1.0.203.162+): the one permitted asset file (1wolf14.zip) — recognized
         //  by the download's suggested file name or URL, whichever mirror the
         //  user found it on — is downloaded by the browser into a temp target
         //  the .Assets pipeline verifies and extracts; any other download is

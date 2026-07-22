@@ -45,13 +45,13 @@
   <!-- One package ships both the engine and host assemblies (CodeBrix.Platform.GameEngine
        and CodeBrix.Platform.GameEngine.Host); there is no separate .Host package. -->
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Platform.GameEngine.MitLicenseForever" Version="1.0.203.200" />
+    <PackageReference Include="CodeBrix.Platform.GameEngine.MitLicenseForever" Version="1.0.203.431" />
     <!-- Optional add-on: SDL2-backed game controller support, published independently of
          the engine package (it pins the engine version above). SDL2 is started with the
          game-controller subsystem only, so it opens no display and contends with nothing
          on any head. On Linux the SYSTEM SDL2 is used (sudo apt install libsdl2-2.0-0);
          when it is missing the manager reports itself unavailable and the game runs on
          with keyboard and mouse. -->
-    <PackageReference Include="CodeBrix.Platform.GameEngine.Sdl2.ZlibLicenseForever" Version="1.0.203.207" />
+    <PackageReference Include="CodeBrix.Platform.GameEngine.Sdl2.ZlibLicenseForever" Version="1.0.203.450" />
   </ItemGroup>
 </Project>

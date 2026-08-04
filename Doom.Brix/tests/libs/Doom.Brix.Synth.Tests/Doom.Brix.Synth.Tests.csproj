@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- xUnit.net v3 test projects are self-executing binaries and must build as
+         Exe; run via Microsoft.Testing.Platform, matching the CodeBrix family
+         test convention. -->
+    <OutputType>Exe</OutputType>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- CodeBrix.Audio is both the system under test (CodeBrix.Audio.Synth's public
+         SoundFont object model) and the reference SF2 reader the *_NAudio tests
+         compare it against (CodeBrix.Audio.Engine.Metadata.SoundFont). -->
+    <PackageReference Include="CodeBrix.Audio.MitLicenseForever" Version="1.0.214.913" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageReference Include="SilverAssertions.ApacheLicenseForever" Version="1.0.164.180" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Polyphone parameter dumps of TimGM6mb (GPL-2). These stayed here rather than
+         moving to CodeBrix.Audio's own copy of this suite: that package is MIT and
+         cannot redistribute GPL-2 data. -->
+    <None Update="ReferenceData\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

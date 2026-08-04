@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The SoundFont synthesizer the MUS/MIDI decoders render through
+         (CodeBrix.Audio.Synth); replaces the removed in-repo Doom.Brix.Synth project. -->
+    <PackageReference Include="CodeBrix.Audio.MitLicenseForever" Version="1.0.214.913" />
+  </ItemGroup>
+</Project>

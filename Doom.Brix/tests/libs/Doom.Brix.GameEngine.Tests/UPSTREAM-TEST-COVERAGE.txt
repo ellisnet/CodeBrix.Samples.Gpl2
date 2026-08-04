@@ -1,0 +1,48 @@
+UPSTREAM TEST COVERAGE — Doom.Brix.GameEngine.Tests
+====================================================================
+The vendored game engine (the ManagedDoom.* code in
+src/libs/Doom.Brix.GameEngine) came with an upstream test suite,
+ManagedDoomTest (github.com/sinshu/managed-doom). This project ports
+the slice of it that can run against the freely distributable
+shareware DOOM1.WAD, converted from MSTest to xUnit v3 +
+SilverAssertions.
+
+PORTED — always on (no WAD needed):
+  FixedTests, AngleTests, TrigTests, GeometryTests
+    (upstream FixedTest/AngleTest/TrigTest/GeometryTest; pure
+    fixed-point math, angles, trig tables, geometry predicates)
+
+PORTED — need the shareware DOOM1.WAD (see TestWad.cs; these FAIL,
+not skip, when the file is absent — place the Doom v1.9 shareware
+DOOM1.WAD at {repo root}/Downloaded/Doom.Brix_assets/DOOM1.WAD):
+  DemoCompatibilityTests
+    (upstream IwadDemo.Doom1SharewareDemo1/2/3: full-engine headless
+    demo playback, tic-by-tic world-state hash checks against
+    upstream's expected values — proves vanilla v1.9 compatibility)
+  WadTests
+    (new, in the spirit of upstream WadTest: v1.9 shareware lump
+    directory facts read from the canonical file)
+  MusicDecoderFactoryTests
+    (new: format detection for the MUS/MIDI decoders extracted from
+    upstream's Silk music backend)
+
+NOT PORTED — require retail/commercial WADs we cannot ship:
+  Upstream keys tests to these files (upstream WadPath.cs names):
+    DOOM.WAD (retail), DOOM2.WAD, TNT.WAD, PLUTONIA.WAD,
+    REQUIEM.WAD, TNTBLOOD.WAD, MM.WAD (PWAD demo packs)
+  The not-ported set is roughly 75+ tests:
+    - UnitTests: BlockMapTest, DemoTest, LineDefTest, MapTest,
+      NodeTest, RejectTest, SectorTest, SegTest, SideDefTest,
+      SubsectorTest, ThingTest, VertexTest, WadTest, and
+      GeometryTest.PointInSubsectorE1M1/PointInSubsectorMap01
+    - CompatibilityTests: DoNothing, FireOnce, MapGimmicks,
+      Miscellaneous, Monsters, MultiLevel, PlayerMovement,
+      PlayerWeapon, PwadDemo, SectorAction (plus the retail/Doom2/
+      Plutonia/TNT methods of IwadDemo)
+  Anyone who owns those WADs can layer these tests back in the same
+  way DemoCompatibilityTests works: resolve the WAD via a TestWad-
+  style locator, port the MSTest asserts mechanically, and keep
+  upstream's expected hash values (they encode vanilla-exe behavior,
+  not machine specifics). The upstream test data folder
+  (ManagedDoomTest/data, ManagedDoomTest/demos) carries the free
+  .lmp/.wad fixtures those tests also need.

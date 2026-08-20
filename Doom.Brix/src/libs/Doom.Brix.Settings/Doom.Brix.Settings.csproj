@@ -3,7 +3,10 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 
+  <!-- The settings machinery (store, typed properties, change events, backup/
+       import/export) is provided by the CodeBrix.Platform.AppSettings add-in;
+       this library is the thin Doom.Brix-named facade over it. -->
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Sqlite.ApacheLicenseForever" Version="1.0.213.50" />
+    <PackageReference Include="CodeBrix.Platform.AppSettings.ApacheLicenseForever" Version="1.0.231.233" />
   </ItemGroup>
 </Project>

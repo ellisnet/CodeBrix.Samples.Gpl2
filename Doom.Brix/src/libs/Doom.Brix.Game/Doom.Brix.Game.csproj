@@ -9,12 +9,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Doom.Brix.GameEngine\Doom.Brix.GameEngine.csproj" />
-    <!-- The sqlite-backed IDoomStorage (SqliteDoomStorage) persists config and
-         save slots through Doom.Brix.Settings' SettingsService, so the game
-         writes no files of its own. This is a plain managed reference to the
-         settings facade; SettingsStore remains the sole owner of the sqlite
-         handle (the CodeBrix.Sqlite package reference lives only in
-         Doom.Brix.Settings). -->
+    <!-- The sqlite-backed storage persists config and save slots through
+         Doom.Brix.Settings' SettingsService, so the game writes no files of
+         its own. This is a plain managed reference to the settings facade,
+         a thin wrapper over the CodeBrix.Platform.AppSettings add-in
+         (the add-in's store owns the sqlite handle). -->
     <ProjectReference Include="..\Doom.Brix.Settings\Doom.Brix.Settings.csproj" />
   </ItemGroup>
 

@@ -9,12 +9,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Wolfenstein.Brix.GameEngine\Wolfenstein.Brix.GameEngine.csproj" />
-    <!-- The sqlite-backed IWolfStorage (SqliteWolfStorage) persists config, save
-         slots and high scores through Wolfenstein.Brix.Settings' SettingsService,
-         so the game writes no files of its own. This is a plain managed reference
-         to the settings facade; SettingsStore remains the sole owner of the sqlite
-         handle (the CodeBrix.Sqlite package reference lives only in
-         Wolfenstein.Brix.Settings). -->
+    <!-- The sqlite-backed storage persists config and save slots through
+         Wolfenstein.Brix.Settings' SettingsService, so the game writes no files of
+         its own. This is a plain managed reference to the settings facade,
+         a thin wrapper over the CodeBrix.Platform.AppSettings add-in
+         (the add-in's store owns the sqlite handle). -->
     <ProjectReference Include="..\Wolfenstein.Brix.Settings\Wolfenstein.Brix.Settings.csproj" />
   </ItemGroup>
 

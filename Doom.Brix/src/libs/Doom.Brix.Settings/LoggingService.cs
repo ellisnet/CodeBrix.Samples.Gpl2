@@ -2,68 +2,35 @@
 // LoggingService.cs
 //
 // Copyright (c) 2026 Jeremy Ellis and contributors
-//     (adapted from CodeBrix.Develop for Doom.Brix; inspired by
-//      MonoDevelop.Core.LoggingService, simplified)
+//     (a thin forwarder to the CodeBrix.Platform.AppSettings add-in's
+//      AppSettingLoggingService)
 // SPDX-License-Identifier: MIT
 //
 
 using System;
-using System.Collections.Generic;
+using CodeBrix.Platform.AppSettings;
 
-namespace Doom.Brix.Settings; //was previously: CodeBrix.Develop.Core
+namespace Doom.Brix.Settings;
 
 /// <summary>
-/// Minimal logging service for the settings backend. Writes timestamped
-/// messages to the console, and forwards every line to any registered
-/// sinks, replaying earlier lines when a sink registers late.
+/// Minimal logging facade for the settings backend, forwarding to the
+/// AppSettings add-in's logging service (console output by default, plus
+/// any registered sinks).
 /// </summary>
 public static class LoggingService
 {
-    static readonly object sync = new();
-    static readonly List<string> history = new();
-    static readonly List<Action<string>> sinks = new();
-
-    static void Log(string level, string message)
-    {
-        var line = $"[{DateTime.Now:HH:mm:ss.fff}] {level}: {message}";
-        Console.WriteLine(line);
-        Action<string>[] targets;
-        lock (sync)
-        {
-            history.Add(line);
-            targets = sinks.ToArray();
-        }
-        foreach (var sink in targets)
-            sink(line);
-    }
-
-    /// <summary>
-    /// Registers a sink that receives every logged line from now on; lines
-    /// logged before registration are replayed to it first, so no message is
-    /// missed. Sinks may be called from any thread — marshal to the UI
-    /// thread inside the sink if needed.
-    /// </summary>
-    public static void AddSink(Action<string> sink)
-    {
-        string[] backlog;
-        lock (sync)
-        {
-            backlog = history.ToArray();
-            sinks.Add(sink);
-        }
-        foreach (var line in backlog)
-            sink(line);
-    }
+    /// <summary>Registers a sink that receives every logged line.</summary>
+    public static void AddSink(Action<string> sink) => AppSettingLoggingService.AddSink(sink);
 
     /// <summary>Logs an informational message.</summary>
-    public static void LogInfo(string message) => Log("INFO ", message);
+    public static void LogInfo(string message) => AppSettingLoggingService.LogInfo(message);
 
     /// <summary>Logs a warning message.</summary>
-    public static void LogWarning(string message) => Log("WARN ", message);
+    public static void LogWarning(string message) => AppSettingLoggingService.LogWarning(message);
 
     /// <summary>Logs an error message.</summary>
-    public static void LogError(string message) => Log("ERROR", message);
+    public static void LogError(string message) => AppSettingLoggingService.LogError(message);
 
     /// <summary>Logs an error message with exception details.</summary>
-    public static void LogError(string message, Exception ex) => Log("ERROR", $"{message}: {ex}");
+    public static void LogError(string message, Exception ex) => AppSettingLoggingService.LogError(message, ex);
 }

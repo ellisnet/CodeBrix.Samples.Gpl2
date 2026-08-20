@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using CodeBrix.Platform.AppSettings;
 using CodeBrix.Sqlite;
 using Doom.Brix.Settings;
 using SilverAssertions;
@@ -8,6 +9,10 @@ using Xunit;
 
 namespace Doom.Brix.Settings.Tests;
 
+// These tests exercise the CodeBrix.Platform.AppSettings store that the
+// Doom.Brix.Settings facade wraps. The add-in's store has no public test
+// clock, so assertions about timestamped file names match on the naming
+// pattern rather than exact names.
 public class SettingsStoreTests : IDisposable
 {
     readonly string root;
@@ -26,8 +31,7 @@ public class SettingsStoreTests : IDisposable
         try { Directory.Delete(root, recursive: true); } catch { /* best effort */ }
     }
 
-    SettingsStore CreateStore(DateTime? now = null) =>
-        new SettingsStore(directory, now == null ? null : () => now.Value);
+    AppSettingsStore CreateStore() => new AppSettingsStore(SettingsService.AppName, directory);
 
     string ExternalPath(string name)
     {
@@ -40,16 +44,28 @@ public class SettingsStoreTests : IDisposable
     string CreateExternalSettingsFile(string key, string value)
     {
         var sourceDirectory = Path.Combine(externalDirectory, Path.GetRandomFileName());
-        using (var source = new SettingsStore(sourceDirectory, () => new DateTime(2026, 1, 1, 0, 0, 0)))
+        using (var source = new AppSettingsStore(SettingsService.AppName, sourceDirectory))
             source.Set(key, value);
-        return Path.Combine(sourceDirectory, "settings.sqlite");
+        return Path.Combine(sourceDirectory, AppSettingsStore.SettingsFileName);
     }
 
-    static string BackupName(string timestamp) => $"settings_auto_backup_{timestamp}.sqlite";
-
+    // The auto-backup files whose names carry a parseable timestamp,
+    // alphabetical (= chronological, the naming scheme's guarantee).
     string[] AutoBackupFiles() =>
-        Directory.EnumerateFiles(directory, "settings_auto_backup_*.sqlite")
-            .Select(Path.GetFileName).OrderBy(name => name).ToArray();
+        Directory.EnumerateFiles(directory, $"{AppSettingsStore.AutoBackupFilePrefix}*.sqlite")
+            .Select(Path.GetFileName)
+            .Where(HasParseableTimestamp)
+            .OrderBy(name => name)
+            .ToArray();
+
+    static bool HasParseableTimestamp(string fileName)
+    {
+        var stampText = fileName.Substring(AppSettingsStore.AutoBackupFilePrefix.Length,
+            fileName.Length - AppSettingsStore.AutoBackupFilePrefix.Length - ".sqlite".Length);
+        return DateTime.TryParseExact(stampText, AppSettingsStore.TimestampFormat,
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out _);
+    }
 
     [Fact]
     public void Missing_file_is_silently_created_fresh()
@@ -59,7 +75,7 @@ public class SettingsStoreTests : IDisposable
 
         //Assert
         store.WasCreatedFresh.Should().BeTrue();
-        File.Exists(Path.Combine(directory, "settings.sqlite")).Should().BeTrue();
+        File.Exists(Path.Combine(directory, AppSettingsStore.SettingsFileName)).Should().BeTrue();
     }
 
     [Fact]
@@ -139,10 +155,10 @@ public class SettingsStoreTests : IDisposable
     {
         //Arrange
         using var store = CreateStore();
-        PropertyChangedEventArgs broadcast = null;
-        PropertyChangedEventArgs keyed = null;
-        store.PropertyChanged += (_, args) => broadcast = args;
-        store.AddPropertyHandler("Doom.Brix.Test.Watched", (_, args) => keyed = args);
+        AppSettingChangedEventArgs broadcast = null;
+        AppSettingChangedEventArgs keyed = null;
+        store.SettingChanged += (_, args) => broadcast = args;
+        store.AddSettingHandler("Doom.Brix.Test.Watched", (_, args) => keyed = args);
 
         //Act
         store.Set("Doom.Brix.Test.Watched", "new");
@@ -158,27 +174,26 @@ public class SettingsStoreTests : IDisposable
     public void Startup_creates_an_autobackup_with_the_timestamp_naming_scheme()
     {
         //Act
-        using var store = CreateStore(new DateTime(2026, 7, 6, 14, 32, 5));
+        using var store = CreateStore();
 
-        //Assert
-        AutoBackupFiles().Should().Equal(new[] { BackupName("2026-07-06_14-32-05") });
+        //Assert — exactly one backup, and its name parses under the scheme
+        AutoBackupFiles().Should().HaveCount(1);
     }
 
     [Fact]
     public void Autobackup_is_a_complete_usable_database()
     {
-        //Arrange
-        using (var store = CreateStore(new DateTime(2026, 7, 6, 8, 0, 0)))
+        //Arrange — the value lands in the file the NEXT start backs up
+        using (var store = CreateStore())
             store.Set("Doom.Brix.Test.InBackup", "captured");
-
-        // Second start backs up the file that now contains the value.
-        using (CreateStore(new DateTime(2026, 7, 6, 9, 0, 0))) { }
+        using (CreateStore()) { }
 
         //Act — pretend the main file was lost and only the newest backup remains.
-        File.Delete(Path.Combine(directory, "settings.sqlite"));
-        File.Copy(Path.Combine(directory, BackupName("2026-07-06_09-00-00")),
-            Path.Combine(directory, "settings.sqlite"));
-        using var restored = CreateStore(new DateTime(2026, 7, 6, 10, 0, 0));
+        var newestBackup = AutoBackupFiles().Last();
+        File.Delete(Path.Combine(directory, AppSettingsStore.SettingsFileName));
+        File.Copy(Path.Combine(directory, newestBackup),
+            Path.Combine(directory, AppSettingsStore.SettingsFileName));
+        using var restored = CreateStore();
 
         //Assert
         restored.Get<string>("Doom.Brix.Test.InBackup").Should().Be("captured");
@@ -187,36 +202,37 @@ public class SettingsStoreTests : IDisposable
     [Fact]
     public void Prune_keeps_only_the_newest_n_by_filename_timestamp()
     {
-        //Arrange — retention 3, with five stale backups whose file times are
+        //Arrange — retention 3, with stale backups whose file times are
         // deliberately misleading (all identical), so only the name matters.
-        using (var store = CreateStore(new DateTime(2026, 7, 1, 0, 0, 0)))
-            store.Set(SettingsStore.AutoBackupRetentionKey, 3);
+        // The manufactured 2026-07 names sort before any real "now" stamp.
+        using (var store = CreateStore())
+            store.AutoBackupRetention = 3;
+        var seed = Path.Combine(directory, AutoBackupFiles().Single());
         foreach (var stamp in new[] { "2026-07-02_00-00-00", "2026-07-03_00-00-00", "2026-07-04_00-00-00" })
-            File.Copy(Path.Combine(directory, BackupName("2026-07-01_00-00-00")),
-                Path.Combine(directory, BackupName(stamp)));
+            File.Copy(seed, Path.Combine(directory,
+                $"{AppSettingsStore.AutoBackupFilePrefix}{stamp}.sqlite"), overwrite: true);
 
         //Act
-        using (CreateStore(new DateTime(2026, 7, 5, 0, 0, 0))) { }
+        using (CreateStore()) { }
 
-        //Assert — newest three remain: the fresh backup counts toward n.
-        AutoBackupFiles().Should().Equal(new[]
-        {
-            BackupName("2026-07-03_00-00-00"),
-            BackupName("2026-07-04_00-00-00"),
-            BackupName("2026-07-05_00-00-00"),
-        });
+        //Assert — the newest three remain (the fresh backup counts toward n);
+        // the oldest manufactured name is pruned away.
+        var remaining = AutoBackupFiles();
+        remaining.Should().HaveCount(3);
+        remaining.Should().NotContain($"{AppSettingsStore.AutoBackupFilePrefix}2026-07-02_00-00-00.sqlite");
+        remaining.Should().Contain($"{AppSettingsStore.AutoBackupFilePrefix}2026-07-04_00-00-00.sqlite");
     }
 
     [Fact]
     public void Retention_zero_creates_no_backup_and_prunes_nothing()
     {
         //Arrange
-        using (var store = CreateStore(new DateTime(2026, 7, 1, 0, 0, 0)))
-            store.Set(SettingsStore.AutoBackupRetentionKey, 0);
+        using (var store = CreateStore())
+            store.AutoBackupRetention = 0;
         var before = AutoBackupFiles();
 
         //Act
-        using (CreateStore(new DateTime(2026, 7, 2, 0, 0, 0))) { }
+        using (CreateStore()) { }
 
         //Assert
         AutoBackupFiles().Should().Equal(before);
@@ -226,45 +242,44 @@ public class SettingsStoreTests : IDisposable
     public void Files_not_matching_the_autobackup_scheme_are_never_deleted()
     {
         //Arrange
-        using (var store = CreateStore(new DateTime(2026, 7, 1, 0, 0, 0)))
-            store.Set(SettingsStore.AutoBackupRetentionKey, 1);
+        using (var store = CreateStore())
+            store.AutoBackupRetention = 1;
         var manualCopy = Path.Combine(directory, "settings_bak_bob_before_changes.sqlite");
-        File.Copy(Path.Combine(directory, "settings.sqlite"), manualCopy);
+        File.Copy(Path.Combine(directory, AppSettingsStore.SettingsFileName), manualCopy);
         // Matches the prefix and extension but has no parseable timestamp.
-        var oddName = Path.Combine(directory, "settings_auto_backup_not-a-timestamp.sqlite");
+        var oddName = Path.Combine(directory,
+            $"{AppSettingsStore.AutoBackupFilePrefix}not-a-timestamp.sqlite");
         File.WriteAllText(oddName, "not a database");
 
         //Act
-        using (CreateStore(new DateTime(2026, 7, 2, 0, 0, 0))) { }
+        using (CreateStore()) { }
 
-        //Assert — the manual copy and the unparseable name survive; the real
-        // 2026-07-01 backup was pruned by retention 1.
+        //Assert — the manual copy and the unparseable name survive; retention 1
+        // leaves exactly one real timestamped backup.
         File.Exists(manualCopy).Should().BeTrue();
         File.Exists(oddName).Should().BeTrue();
-        AutoBackupFiles().Should().Equal(new[]
-        {
-            BackupName("2026-07-02_00-00-00"),
-            "settings_auto_backup_not-a-timestamp.sqlite",
-        });
+        AutoBackupFiles().Should().HaveCount(1);
     }
 
     [Fact]
     public void Corrupt_file_is_quarantined_and_restored_from_newest_backup()
     {
-        //Arrange — a healthy run that leaves one backup containing the value.
-        using (var store = CreateStore(new DateTime(2026, 7, 1, 0, 0, 0)))
+        //Arrange — a healthy run that leaves a backup containing the value.
+        using (var store = CreateStore())
             store.Set("Doom.Brix.Test.Value", "from-backup");
-        using (CreateStore(new DateTime(2026, 7, 2, 0, 0, 0))) { }
-        File.WriteAllText(Path.Combine(directory, "settings.sqlite"), "this is not a sqlite database");
+        using (CreateStore()) { }
+        File.WriteAllText(Path.Combine(directory, AppSettingsStore.SettingsFileName),
+            "this is not a sqlite database");
 
         //Act
-        using var store2 = CreateStore(new DateTime(2026, 7, 3, 0, 0, 0));
+        using var store2 = CreateStore();
 
         //Assert
         store2.WasRestoredFromBackup.Should().BeTrue();
         store2.WasCreatedFresh.Should().BeFalse();
         store2.Get<string>("Doom.Brix.Test.Value").Should().Be("from-backup");
-        File.Exists(Path.Combine(directory, "settings_corrupt_2026-07-03_00-00-00.sqlite")).Should().BeTrue();
+        Directory.EnumerateFiles(directory, $"{AppSettingsStore.CorruptFilePrefix}*.sqlite")
+            .Should().NotBeEmpty();
     }
 
     [Fact]
@@ -272,26 +287,28 @@ public class SettingsStoreTests : IDisposable
     {
         //Arrange
         Directory.CreateDirectory(directory);
-        File.WriteAllText(Path.Combine(directory, "settings.sqlite"), "garbage");
+        File.WriteAllText(Path.Combine(directory, AppSettingsStore.SettingsFileName), "garbage");
 
         //Act
-        using var store = CreateStore(new DateTime(2026, 7, 3, 0, 0, 0));
+        using var store = CreateStore();
 
         //Assert
         store.WasCreatedFresh.Should().BeTrue();
         store.WasRestoredFromBackup.Should().BeFalse();
-        File.Exists(Path.Combine(directory, "settings_corrupt_2026-07-03_00-00-00.sqlite")).Should().BeTrue();
+        Directory.EnumerateFiles(directory, $"{AppSettingsStore.CorruptFilePrefix}*.sqlite")
+            .Should().NotBeEmpty();
     }
 
     [Fact]
     public void Retention_read_is_clamped_to_the_legal_range()
     {
-        //Arrange
+        //Arrange — write the raw key past the maximum, bypassing the property's
+        // own write-side clamp.
         using var store = CreateStore();
-        store.Set(SettingsStore.AutoBackupRetentionKey, 99);
+        store.Set(AppSettingsStore.AutoBackupRetentionKey, 99);
 
         //Assert
-        store.GetAutoBackupRetention().Should().Be(SettingsStore.MaxAutoBackupRetention);
+        store.AutoBackupRetention.Should().Be(AppSettingsStore.MaxAutoBackupRetention);
     }
 
     [Fact]
@@ -323,8 +340,8 @@ public class SettingsStoreTests : IDisposable
         File.Exists(exportPath + "-shm").Should().BeFalse();
         var otherInstallation = Path.Combine(root, "other-installation");
         Directory.CreateDirectory(otherInstallation);
-        File.Copy(exportPath, Path.Combine(otherInstallation, "settings.sqlite"));
-        using var reopened = new SettingsStore(otherInstallation);
+        File.Copy(exportPath, Path.Combine(otherInstallation, AppSettingsStore.SettingsFileName));
+        using var reopened = new AppSettingsStore(SettingsService.AppName, otherInstallation);
         reopened.Get<string>("Doom.Brix.Test.Exported").Should().Be("travels");
     }
 
@@ -354,7 +371,7 @@ public class SettingsStoreTests : IDisposable
         store.StageIncomingFile(sourcePath);
 
         //Assert
-        File.Exists(Path.Combine(directory, "settings_incoming.sqlite")).Should().BeTrue();
+        File.Exists(Path.Combine(directory, AppSettingsStore.IncomingFileName)).Should().BeTrue();
     }
 
     [Fact]
@@ -370,7 +387,7 @@ public class SettingsStoreTests : IDisposable
 
         //Assert
         act.Should().Throw<InvalidDataException>();
-        File.Exists(Path.Combine(directory, "settings_incoming.sqlite")).Should().BeFalse();
+        File.Exists(Path.Combine(directory, AppSettingsStore.IncomingFileName)).Should().BeFalse();
     }
 
     [Fact]
@@ -390,7 +407,7 @@ public class SettingsStoreTests : IDisposable
 
         //Assert
         act.Should().Throw<InvalidDataException>();
-        File.Exists(Path.Combine(directory, "settings_incoming.sqlite")).Should().BeFalse();
+        File.Exists(Path.Combine(directory, AppSettingsStore.IncomingFileName)).Should().BeFalse();
     }
 
     [Fact]
@@ -398,21 +415,22 @@ public class SettingsStoreTests : IDisposable
     {
         //Arrange — a store holding the old value, with an import staged.
         var sourcePath = CreateExternalSettingsFile("Doom.Brix.Test.Key", "new");
-        using (var store = CreateStore(new DateTime(2026, 7, 1, 0, 0, 0)))
+        using (var store = CreateStore())
         {
             store.Set("Doom.Brix.Test.Key", "old");
             store.StageIncomingFile(sourcePath);
         }
 
         //Act
-        using var reopened = CreateStore(new DateTime(2026, 7, 5, 12, 30, 45));
+        using var reopened = CreateStore();
 
         //Assert — the import took over; the previous file was kept.
         reopened.WasReplacedByImport.Should().BeTrue();
         reopened.WasCreatedFresh.Should().BeFalse();
         reopened.Get<string>("Doom.Brix.Test.Key").Should().Be("new");
-        File.Exists(Path.Combine(directory, "settings_incoming.sqlite")).Should().BeFalse();
-        File.Exists(Path.Combine(directory, "settings_old_2026-07-05_12-30-45.sqlite")).Should().BeTrue();
+        File.Exists(Path.Combine(directory, AppSettingsStore.IncomingFileName)).Should().BeFalse();
+        Directory.EnumerateFiles(directory, $"{AppSettingsStore.OldFilePrefix}*.sqlite")
+            .Should().NotBeEmpty();
     }
 
     [Fact]
@@ -421,15 +439,41 @@ public class SettingsStoreTests : IDisposable
         //Arrange — a staged import in a folder with no settings.sqlite yet.
         var sourcePath = CreateExternalSettingsFile("Doom.Brix.Test.Key", "fresh-import");
         Directory.CreateDirectory(directory);
-        using (var source = new SettingsStore(Path.GetDirectoryName(sourcePath)))
-            source.ExportToFile(Path.Combine(directory, "settings_incoming.sqlite"));
+        using (var source = new AppSettingsStore(SettingsService.AppName, Path.GetDirectoryName(sourcePath)))
+            source.ExportToFile(Path.Combine(directory, AppSettingsStore.IncomingFileName));
 
         //Act
-        using var store = CreateStore(new DateTime(2026, 7, 5, 12, 30, 45));
+        using var store = CreateStore();
 
         //Assert
         store.WasReplacedByImport.Should().BeTrue();
         store.Get<string>("Doom.Brix.Test.Key").Should().Be("fresh-import");
-        Directory.EnumerateFiles(directory, "settings_old_*.sqlite").Should().BeEmpty();
+        Directory.EnumerateFiles(directory, $"{AppSettingsStore.OldFilePrefix}*.sqlite").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Facade_initializes_reads_writes_and_shuts_down()
+    {
+        //Arrange — the facade is process-global state, so this test (the only
+        // facade user in the assembly) restores it to uninitialized when done.
+        SettingsService.IsInitialized.Should().BeFalse();
+        try
+        {
+            //Act
+            SettingsService.Initialize(directory);
+
+            //Assert
+            SettingsService.IsInitialized.Should().BeTrue();
+            SettingsService.Store.AppName.Should().Be(SettingsService.AppName);
+            SettingsService.Set("Doom.Brix.Test.Facade", "works");
+            SettingsService.HasValue("Doom.Brix.Test.Facade").Should().BeTrue();
+            SettingsService.Get<string>("Doom.Brix.Test.Facade").Should().Be("works");
+            SettingsService.Get("Doom.Brix.Test.FacadeMissing", 3).Should().Be(3);
+        }
+        finally
+        {
+            SettingsService.Shutdown();
+        }
+        SettingsService.IsInitialized.Should().BeFalse();
     }
 }

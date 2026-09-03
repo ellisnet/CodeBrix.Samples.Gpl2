@@ -1,0 +1,73 @@
+THIRD-PARTY NOTICES
+===================
+
+This file documents third-party code and content that is adapted into,
+bundled with, or used at run time by the Wolfenstein.Brix application, together
+with the licenses under which it is provided. The application, like the
+whole CodeBrix.Samples.Gpl2 repository, is licensed under the GNU General
+Public License version 2 (see the repository LICENSE).
+
+Third-party CODE dependencies consumed as NuGet packages carry their own
+license and third-party notices in their own repository/package (the
+CodeBrix.* packages ship their own THIRD-PARTY-NOTICES.txt), so those are
+not reproduced here.
+
+Each component's license text is either carried in this folder as a
+LICENSE_*.txt file as noted, or reproduced in full inline in its entry
+below. The application copies those license files AND this notices file
+into its build output (ThirdPartyAssets/) alongside the code they cover,
+so a distributed build carries every notice either way.
+
+WOLFENSTEIN.BRIX
+--------------------------------------------------------------------
+1. csharp-wolfenstein
+   - What: adapted rendering and map-decoding code — the CPU
+     raycaster, wall/door/sprite renderers, Carmack/RLEW map
+     decompression and level-construction logic, by James Randall;
+     adapted to this engine and re-pointed at the real .WL1 parsers.
+     CODE ONLY: none of that project's pre-extracted asset files
+     (PNGs, MP3s) are used or redistributed.
+   - Where: src/libs/Wolfenstein.Brix.GameEngine (Rendering/, parts
+     of Assets/), vendored at commit accf9db9; each vendored file's
+     header cites its upstream source file
+   - Upstream: https://github.com/JamesRandall/csharp-wolfenstein
+   - License: MIT — LICENSE_CSharpWolfenstein.txt
+
+2. Wolfenstein 3-D iOS source release ("Wolf3D iOS v2.1")
+   - What: id Software's official GPL release of the Wolfenstein 3-D
+     source (based on the Wolfenstein 3-D Redux codebase by Michael
+     Liebscher, incorporating code by DarkOne the Hacker and
+     Copyright (C) 1992 Id Software, Inc.). The game logic — actor
+     state machines, AI, combat, weapons, doors/areas, pushwalls,
+     pickups, level loading and spawn tables — plus the data-file
+     format handling (VSWAP/GAMEMAPS/VGAGRAPH/AUDIOT parsers, the
+     VGA palette, the AdLib/IMF drivers) are hand-translated from it
+     into C#.
+   - Where: src/libs/Wolfenstein.Brix.GameEngine (Logic/, parts of
+     Assets/ and Audio/), translated from commit d7fff51d; each
+     translated file's header cites the original C file
+   - Upstream: https://github.com/id-Software/Wolf3D-iOS
+   - License: GPLv2 "or (at your option) any later version" —
+     LICENSE_Wolf3D-iOS.txt
+
+3. Nuked OPL3
+   - What: the cycle-accurate YMF262 (OPL3, OPL2-compatible) FM
+     synthesizer emulator by Nuke.YKT, hand-ported to C# for the
+     AdLib music and sound effects; the port is verified bit-exact
+     against the C original.
+   - Where: src/libs/Wolfenstein.Brix.GameEngine/Audio/NukedOpl3.cs,
+     ported from upstream version 1.8, commit cfedb09
+   - Upstream: https://github.com/nukeykt/Nuked-OPL3
+   - License: LGPL-2.1-or-later —
+     LICENSE_NukedOPL3.txt (compatible with, and
+     distributed here as part of a work under, GPLv2)
+
+Not included: the .WL1 data files (the id Software shareware episode
+data) are NOT distributed in this repository or with the application;
+the user supplies them through the application's Assets Mode under
+id's original shareware terms (see VENDOR.DOC in that download).
+
+Consulted but contributing nothing: the 1992 Wolfenstein 3-D DOS
+source release (id Software's "limited use" license, not GPL) was
+used strictly as a behavioral reference for data-format facts; no
+code from it appears in this repository.

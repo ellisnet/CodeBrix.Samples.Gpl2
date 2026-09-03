@@ -1,159 +1,19 @@
-THIRD-PARTY NOTICES — CodeBrix.Samples.Gpl2
-====================================================================
-This repository is licensed, across the board, under the GNU General
-Public License version 2 (see LICENSE). The applications in it
-incorporate the following third-party components. Each component's
-license text is either carried in the repo as a LICENSE_*.txt file as
-noted, or reproduced in full inline in its entry below, and each
-application copies those license files AND this notices file into its
-build output (ThirdPartyAssets/) alongside the code they cover — so a
-distributed build carries every notice either way.
+THIRD-PARTY NOTICES
+===================
 
-DOOM.BRIX
---------------------------------------------------------------------
-1. managed-doom
-   - What: the adapted game engine — a hand-translated C# port of
-     Linux Doom by Nobuaki Tanaka, incorporating code
-     Copyright (C) 1993-1996 Id Software, Inc.
-   - Where: src/libs/Doom.Brix.GameEngine (namespaces ManagedDoom.*),
-     adapted from commit 9365696e
-   - Upstream: https://github.com/sinshu/managed-doom
-   - License: GPLv2 "or (at your option) any later version" —
-     Doom.Brix/LICENSE_ManagedDoom.txt; the per-file upstream
-     copyright headers are preserved in the vendored sources.
+This repository is licensed, across the board, under the GNU General Public
+License version 2 (see LICENSE).
 
-2. MeltySynth (SoundFont test suite only)
-   - What: the SoundFont parsing regression tests, adapted from the
-     test suite of the MeltySynth SoundFont MIDI synthesizer by
-     Nobuaki Tanaka. The synthesizer itself is no longer part of this
-     repository — music playback goes through the CodeBrix.Audio
-     package — but these tests remain derived work and so carry the
-     upstream notice.
-   - Where: tests/libs/Doom.Brix.Synth.Tests; each adapted file
-     carries a //was previously: header naming the upstream test it
-     came from. Adapted from version 2.4.1.
-   - Upstream: https://github.com/sinshu/meltysynth
-   - License: MIT, reproduced in full below. MeltySynth's own notice
-     credits three further projects it derives from, so the
-     attribution is a chain of four; all four are MIT and all four
-     notices are reproduced together, exactly as MeltySynth ships
-     them.
+Each application folder in this repository carries its own
+THIRD-PARTY-NOTICES.txt. That file is the authoritative record of the
+third-party code, data and assets the application adapts, bundles, or uses
+at run time, together with their licenses and upstream locations. Where an
+application must ship the full text of a third-party license, that text is
+in the application folder as a LICENSE_*.txt file, and the application
+copies those files and its notices file into its build output alongside the
+code they cover.
 
-   ----- MeltySynth MIT License (covering all four projects) -----
-
-   MIT License
-
-   C# Synth (http://csharpsynthproject.codeplex.com):
-   Copyright (C) 2014 Alex Veltsistas
-
-   TinySoundFont (https://github.com/schellingb/TinySoundFont):
-   Copyright (C) 2017, 2018 Bernhard Schelling
-   Based on SFZero, Copyright (C) 2012 Steve Folta (https://github.com/stevefolta/SFZero)
-
-   MeltySynth:
-   Copyright (C) 2021 Nobuaki Tanaka
-
-   Permission is hereby granted, free of charge, to any person obtaining a copy of
-   this software and associated documentation files (the "Software"), to deal in
-   the Software without restriction, including without limitation the rights to
-   use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-   of the Software, and to permit persons to whom the Software is furnished to do
-   so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included in all
-   copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-   SOFTWARE.
-
-   ----- end MeltySynth MIT License -----
-
-3. TimGM6mb SoundFont (TimGM6mb.sf2)
-   - What: General-MIDI SoundFont by Tim Brechbill, shipped with the
-     application for music playback.
-   - Where: src/libs/Doom.Brix.Game/ThirdPartyAssets/TimGM6mb.sf2
-     (5,969,788 bytes; md5 1f1ad87ae6f87033d9a591eca567d919; obtained
-     from the Debian package timgm6mb-soundfont 1.3-5). Parameter
-     tables derived from this SoundFont also ship as test reference
-     data under
-     tests/libs/Doom.Brix.Synth.Tests/ReferenceData/Polyphone/TimGM6mb/.
-   - Upstream: https://timbrechbill.com/saxguru/Timidity.php
-   - License: GPLv2 — Doom.Brix/LICENSE_TimGM6mb.txt
-
-4. Polyphone (test-data tooling provenance)
-   - What: the SoundFont-parameter reference tables in item 3 were
-     generated with the Polyphone SoundFont editor. Polyphone itself
-     is not distributed here; only the numeric tables it produced are,
-     under the TimGM6mb GPLv2 license.
-   - Upstream: https://www.polyphone-soundfonts.com/
-
-Not included: DOOM1.WAD (the id Software shareware episode data) is
-NOT distributed in this repository or with the application; the user
-supplies it through the application's Assets Mode under id's original
-shareware terms.
-
-Also not included: reference test data derived from the Arachno,
-GeneralUser GS, or SGM-V2.01 SoundFonts (exercised by the original
-upstream test suite) is NOT redistributed here — those SoundFonts'
-licenses do not clearly permit redistribution of derived data, or
-(GeneralUser GS) their .sf2 is not present in the repo. Only the
-TimGM6mb-derived data above is kept.
-
-WOLFENSTEIN.BRIX
---------------------------------------------------------------------
-1. csharp-wolfenstein
-   - What: adapted rendering and map-decoding code — the CPU
-     raycaster, wall/door/sprite renderers, Carmack/RLEW map
-     decompression and level-construction logic, by James Randall;
-     adapted to this engine and re-pointed at the real .WL1 parsers.
-     CODE ONLY: none of that project's pre-extracted asset files
-     (PNGs, MP3s) are used or redistributed.
-   - Where: src/libs/Wolfenstein.Brix.GameEngine (Rendering/, parts
-     of Assets/), vendored at commit accf9db9; each vendored file's
-     header cites its upstream source file
-   - Upstream: https://github.com/JamesRandall/csharp-wolfenstein
-   - License: MIT — Wolfenstein.Brix/LICENSE_CSharpWolfenstein.txt
-
-2. Wolfenstein 3-D iOS source release ("Wolf3D iOS v2.1")
-   - What: id Software's official GPL release of the Wolfenstein 3-D
-     source (based on the Wolfenstein 3-D Redux codebase by Michael
-     Liebscher, incorporating code by DarkOne the Hacker and
-     Copyright (C) 1992 Id Software, Inc.). The game logic — actor
-     state machines, AI, combat, weapons, doors/areas, pushwalls,
-     pickups, level loading and spawn tables — plus the data-file
-     format handling (VSWAP/GAMEMAPS/VGAGRAPH/AUDIOT parsers, the
-     VGA palette, the AdLib/IMF drivers) are hand-translated from it
-     into C#.
-   - Where: src/libs/Wolfenstein.Brix.GameEngine (Logic/, parts of
-     Assets/ and Audio/), translated from commit d7fff51d; each
-     translated file's header cites the original C file
-   - Upstream: https://github.com/id-Software/Wolf3D-iOS
-   - License: GPLv2 "or (at your option) any later version" —
-     Wolfenstein.Brix/LICENSE_Wolf3D-iOS.txt
-
-3. Nuked OPL3
-   - What: the cycle-accurate YMF262 (OPL3, OPL2-compatible) FM
-     synthesizer emulator by Nuke.YKT, hand-ported to C# for the
-     AdLib music and sound effects; the port is verified bit-exact
-     against the C original.
-   - Where: src/libs/Wolfenstein.Brix.GameEngine/Audio/NukedOpl3.cs,
-     ported from upstream version 1.8, commit cfedb09
-   - Upstream: https://github.com/nukeykt/Nuked-OPL3
-   - License: LGPL-2.1-or-later —
-     Wolfenstein.Brix/LICENSE_NukedOPL3.txt (compatible with, and
-     distributed here as part of a work under, GPLv2)
-
-Not included: the .WL1 data files (the id Software shareware episode
-data) are NOT distributed in this repository or with the application;
-the user supplies them through the application's Assets Mode under
-id's original shareware terms (see VENDOR.DOC in that download).
-
-Consulted but contributing nothing: the 1992 Wolfenstein 3-D DOS
-source release (id Software's "limited use" license, not GPL) was
-used strictly as a behavioral reference for data-format facts; no
-code from it appears in this repository.
+Third-party CODE dependencies are consumed as NuGet packages. Each package
+carries its own license and third-party notices in its own repository/package
+(the CodeBrix.* packages ship their own THIRD-PARTY-NOTICES.txt), so those are
+not reproduced here.

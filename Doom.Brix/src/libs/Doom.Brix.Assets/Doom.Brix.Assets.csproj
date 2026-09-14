@@ -4,6 +4,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Compression.MitLicenseForever" Version="1.0.198.139" />
+    <PackageReference Include="CodeBrix.Compression.MitLicenseForever" Version="1.0.248.1109" />
+    <PackageReference Include="CodeBrix.Platform.Fonts.OpenSans.ApacheLicenseForever" Version="1.0.248.1181" />
   </ItemGroup>
 </Project>

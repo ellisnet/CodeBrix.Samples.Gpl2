@@ -13,14 +13,14 @@
     <!-- CodeBrix.Audio is both the system under test (CodeBrix.Audio.Synth's public
          SoundFont object model) and the reference SF2 reader the *_NAudio tests
          compare it against (CodeBrix.Audio.Engine.Metadata.SoundFont). -->
-    <PackageReference Include="CodeBrix.Audio.MitLicenseForever" Version="1.0.214.913" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
-    <PackageReference Include="SilverAssertions.ApacheLicenseForever" Version="1.0.164.180" />
+    <PackageReference Include="CodeBrix.Audio.MitLicenseForever" Version="1.0.250.60" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
+    <PackageReference Include="SilverAssertions.ApacheLicenseForever" Version="1.0.248.1071" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="xunit.v3" Version="4.0.0" />
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
   </ItemGroup>
 
   <ItemGroup>

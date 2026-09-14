@@ -4,6 +4,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Compression.MitLicenseForever" Version="1.0.198.139" />
+    <PackageReference Include="CodeBrix.Compression.MitLicenseForever" Version="1.0.248.1109" />
   </ItemGroup>
 </Project>

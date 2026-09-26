@@ -7,6 +7,6 @@
        import/export) is provided by the CodeBrix.Platform.AppSettings add-in;
        this library is the thin Doom.Brix-named facade over it. -->
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Platform.AppSettings.ApacheLicenseForever" Version="1.0.254.167" />
+    <PackageReference Include="CodeBrix.Platform.AppSettings.ApacheLicenseForever" Version="1.0.269.1395" />
   </ItemGroup>
 </Project>

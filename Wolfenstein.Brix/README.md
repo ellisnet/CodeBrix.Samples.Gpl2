@@ -390,23 +390,26 @@ and
 
 Keys reach the game only while the game surface holds keyboard focus, and three
 separate paths take focus away: first start, every click on the canvas, and the
-window being deactivated and activated again. Each needs its own repair, and
-`MainPage.xaml.cs` makes all three one-liners that funnel into `FocusGameCanvas()`,
-which defers through the dispatcher so focus lands after whatever took it has
-finished processing. The pointer handler is registered with
-`handledEventsToo: true`, because the press may already be marked handled. Focus
-is only ever stolen in Game Mode: in Assets Mode the embedded browser owns the
-keyboard and taking it would break typing.
+window being deactivated and activated again. `MainPage.xaml.cs` repairs the
+first two with one-liners that funnel into `FocusGameCanvas()`, which defers
+through the dispatcher so focus lands after whatever took it has finished
+processing; the pointer handler is registered with `handledEventsToo: true`,
+because the press may already be marked handled. The third repair is the
+engine's: `GameWindowLifecycle`, attached to the window in
+`Wolfenstein.Brix/src/Wolfenstein.Brix.UI/App.xaml.cs`, hands focus back to the
+canvas of every running game host whenever the window is activated. The host
+exists only from Game Mode on, so in Assets Mode the embedded browser keeps the
+keyboard and typing in it is never broken.
 
 Two different pauses live nearby and should not be conflated. The canvas's
 `LostFocus` is forwarded to the host, and the game's own logic pauses gameplay
-into its menu on the next tic. Separately,
-`Wolfenstein.Brix/src/Wolfenstein.Brix.UI/App.xaml.cs` wires the window's
-`VisibilityChanged` to the engine's global pause and resume, so minimizing parks
-the entire loop — including the music stream — and restoring resumes with the gap
-invisible to game time. Both engine calls are idempotent and a pause arriving
+into its menu on the next tic. Separately, the same `GameWindowLifecycle` call
+pauses the engine when the window is minimized and resumes it when the window is
+shown again, so minimizing parks the entire loop — including the music stream —
+and restoring resumes with the gap invisible to game time. A pause arriving
 before the host initializes simply starts the loop parked, so no ordering guard is
-needed. Workspace switches deliberately do not pause.
+needed, and the helper resumes only a pause it made itself. Workspace switches
+deliberately do not pause.
 
 See
 [Keep keyboard focus on a game canvas](../BLUEPRINTS.md#keep-keyboard-focus-on-a-game-canvas)

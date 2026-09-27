@@ -275,7 +275,8 @@ protected override void OnLaunched(LaunchActivatedEventArgs args)
         rootFrame.Navigate(typeof(Views.MainPage), args.Arguments);
     }
 
-    // ... window lifecycle handlers (see the pause and focus blueprints) ...
+    //Pause while minimized, refocus the canvas on activation (see the pause and focus blueprints)
+    GameWindowLifecycle.Attach(MainWindow);
 
     MainWindow.Activate();
 }
@@ -1191,11 +1192,12 @@ while it holds keyboard focus, and ordinary interactions keep taking focus away
 from it. The symptom is a keyboard that goes silently dead with nothing on
 screen to explain it.
 
-**The MVVM shape.** Focus is genuine view plumbing and stays in the page, but
-the page keeps it to a handful of one-line handlers and asks the view model
-which mode it is in before stealing focus. The application forwards window
-activation to the page through one internal method. The view model never touches
-focus; it only publishes the mode.
+**The MVVM shape.** Focus is genuine view plumbing and stays in the page, which
+keeps it to two one-line handlers: first start and every click on the canvas. The
+third path, window deactivation followed by activation, is the engine's job: the
+application attaches `GameWindowLifecycle` to the window once, and it hands focus
+back to the canvas of every running game host whenever the window is activated.
+The view model never touches focus.
 
 **Code.**
 
@@ -1214,17 +1216,6 @@ GameCanvas.AddHandler(
 
 // ...
 
-//Called by the app when the window is activated. ... Game Mode only: in
-//  Assets Mode the embedded browser owns the keyboard, and stealing focus
-//  would break typing in it.
-internal void OnWindowActivated()
-{
-    if (DataContext is MainViewModel { IsGameMode: true })
-    {
-        FocusGameCanvas();
-    }
-}
-
 //Defer to the dispatcher so focus lands after whatever took it from the
 //  click finishes processing.
 private void FocusGameCanvas() =>
@@ -1233,14 +1224,9 @@ private void FocusGameCanvas() =>
 
 ```csharp
 // From CodeBrix.Samples.Gpl2/Doom.Brix/src/Doom.Brix.UI/App.xaml.cs
-MainWindow.Activated += (_, e) =>
-{
-    if (e.WindowActivationState != global::Windows.UI.Core.CoreWindowActivationState.Deactivated &&
-        rootFrame.Content is Views.MainPage page)
-    {
-        page.OnWindowActivated();
-    }
-};
+//  ... activating the window hands keyboard focus back to the game canvas, so
+//  alt-tabbing away and back never leaves the keyboard dead ...
+GameWindowLifecycle.Attach(MainWindow);
 ```
 
 **Where to look.**
@@ -1254,23 +1240,23 @@ MainWindow.Activated += (_, e) =>
 
 **Sharp edges.**
 
-- Three separate paths lose focus and each needs its own repair: the canvas's
-  first start, every click on the canvas, and window deactivation followed by
-  activation (alt-tabbing away and back, or raising the window from another
-  application).
+- Three separate paths lose focus: the canvas's first start, every click on the
+  canvas, and window deactivation followed by activation (alt-tabbing away and
+  back, or raising the window from another application). The page repairs the
+  first two; `GameWindowLifecycle` repairs the third.
 - Register the pointer handler with `handledEventsToo: true`; the press is often
   already marked handled by the time it reaches you.
 - Re-apply focus through the dispatcher, not inline in the handler, so it lands
-  after whatever took it finishes processing.
+  after whatever took it finishes processing (`GameWindowLifecycle` does the
+  same for its refocus).
 - Only steal focus in the mode that owns the keyboard. In Assets Mode the
-  embedded browser owns it, and stealing focus would break typing.
+  embedded browser owns it, and stealing focus would break typing. The
+  activation refocus needs no mode check: it reaches only the canvas of a
+  running game host, and the host is created when Game Mode starts.
 - A connected gamepad keeps working throughout the failure, because the SDL2
   path reads the device directly and needs no window focus. Both applications
   record that in a comment, because it makes the symptom look stranger than it
   is.
-- The application casts the frame's content to the concrete page type to make
-  this call. A small interface the page implements would remove that coupling
-  from `App`.
 
 ### Execute a view model command when Enter is pressed in a text box
 
@@ -2341,34 +2327,24 @@ internal sealed class CodeBrixVideo : IVideo
 **When you want this.** A background window should not keep a loop and an audio
 device busy, and the user should come back exactly where they left off.
 
-**The MVVM shape.** Window-level lifecycle belongs to the application object.
-Both calls are idempotent, so no state has to be tracked and no ordering guard
-is needed.
+**The MVVM shape.** Window-level lifecycle belongs to the application object,
+and the engine's Host layer already knows what to do with a window: one
+`GameWindowLifecycle.Attach` call where the window is created pauses the engine
+when the window is hidden, resumes it when the window is shown again, and (see
+the focus blueprint) refocuses the game canvas on activation. Nothing has to be
+tracked: a pause that lands before the game host initializes simply starts the
+loop parked.
 
 **Code.**
 
 ```csharp
 // From CodeBrix.Samples.Gpl2/Wolfenstein.Brix/src/Wolfenstein.Brix.UI/App.xaml.cs
-//The GameEngine's GLOBAL pause: minimizing the window parks the whole
-//  engine (the 70 Hz game loop idles at ~zero CPU and audio — including
-//  the OPL music stream — suspends); restoring resumes exactly where it
-//  left off, with the pause invisible to game time. The game's own
-//  ESC-menu pause is separate game logic and unaffected. Both calls are
-//  idempotent, and a pause that lands before the game host initializes
-//  simply starts the loop parked.
-// ... (X11 minimize needs a platform head that tracks _NET_WM_STATE;
-//      workspace switches deliberately do NOT pause)
-MainWindow.VisibilityChanged += (_, e) =>
-{
-    if (e.Visible)
-    {
-        global::CodeBrix.Platform.GameEngine.Engine.Instance.Resume();
-    }
-    else
-    {
-        global::CodeBrix.Platform.GameEngine.Engine.Instance.Pause();
-    }
-};
+//One call wires the window to the game: minimizing pauses the whole engine
+//  (the game loop parks at ~zero CPU and audio suspends) and restoring resumes
+//  it with the gap invisible to game time; ...
+//  The game's own ESC-menu pause is separate game logic and unaffected.
+//  ... Workspace switches are not visibility changes and do not pause.
+GameWindowLifecycle.Attach(MainWindow);
 ```
 
 **Where to look.**
@@ -2384,10 +2360,13 @@ MainWindow.VisibilityChanged += (_, e) =>
   and kept the loop running while minimized.
 - Workspace switches deliberately do not pause.
 - This engine-level pause is separate from any in-application pause the
-  simulation implements itself. Do not conflate them.
-- The calls reach a static engine singleton from the application class. Behind a
-  small lifecycle interface registered with `SimpleServiceResolver` this would
-  be testable and would keep `App` framework-only.
+  simulation implements itself. Do not conflate them. The helper keeps them
+  apart too: it resumes only a pause it made itself, so a pause the game made
+  stays in force when the window comes back.
+- A game that wants to latch its own pause menu when the window is hidden
+  overrides the host's `OnWindowHidden` hook (it runs before the engine
+  pauses); neither game here needs to, since Doom and Wolfenstein keep their own
+  pause logic in the simulation.
 
 ### Pump keyboard events and held key state into a game loop
 

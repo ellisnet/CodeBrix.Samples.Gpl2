@@ -46,7 +46,7 @@ of mutable state in one sqlite settings store.
   render, clicks on the canvas and window activation:
   [Keep keyboard focus on a game canvas](../BLUEPRINTS.md#keep-keyboard-focus-on-a-game-canvas).
 - How minimizing the window parks the whole engine and restoring resumes it
-  exactly where it left off, with two idempotent calls from the application
+  exactly where it left off, with one call from the application
   object: [Pause a game engine when the window is minimized](../BLUEPRINTS.md#pause-a-game-engine-when-the-window-is-minimized).
 - How controller support can be always on, never configured, and completely
   inert when SDL2 or a controller is missing:
@@ -432,22 +432,24 @@ A game surface only receives key events while it holds keyboard focus, and three
 separate things take focus away: the very first render, a click on the canvas
 itself (which is also how you fire), and the window being deactivated and
 activated again. All three are handled. The page hands focus to the canvas from
-the `FirstStarted` handler, re-applies it after every pointer release with
-`handledEventsToo: true` because the press is often already marked handled, and
-exposes one internal method the application object calls on window activation.
-That method checks the view model's mode first: in Assets Mode the embedded
-browser owns the keyboard and stealing focus would break typing in it. Focus is
-always re-applied through the dispatcher, so it lands after whatever took it
-finishes processing. The symptom this prevents is genuinely confusing, because a
-connected gamepad keeps working the whole time: SDL2 reads the device directly and
-needs no window focus. Focus is real view plumbing and belongs in the page; what
-the view model owns is the mode the page consults. Two other pieces of the same
-problem live elsewhere: the WinWpfSkia head opts into input-fair dispatcher
-scheduling, because that head's default posts paints at a priority that outranks
-the tier WPF delivers key events on, and a device where one paint takes longer
-than the tic period would never empty the paint queue; and the application object
-pauses and resumes the whole engine on window visibility changes, so a minimized
-window costs nothing and comes back exactly where it left off. Files:
+the `FirstStarted` handler and re-applies it after every pointer release with
+`handledEventsToo: true` because the press is often already marked handled; the
+third path is the engine's: `GameWindowLifecycle`, attached to the window by the
+application object, hands focus back to the canvas of every running game host
+whenever the window is activated. That reaches the canvas only once the host
+exists, which is when Game Mode starts, so in Assets Mode the embedded browser
+keeps the keyboard and typing in it is never broken. Focus is always re-applied
+through the dispatcher, so it lands after whatever took it finishes processing.
+The symptom this prevents is genuinely confusing, because a connected gamepad
+keeps working the whole time: SDL2 reads the device directly and needs no window
+focus. Focus is real view plumbing and belongs in the page and the window
+helper; the view model never touches it. Two other pieces of the same problem
+live elsewhere: the WinWpfSkia head opts into input-fair dispatcher scheduling,
+because that head's default posts paints at a priority that outranks the tier WPF
+delivers key events on, and a device where one paint takes longer than the tic
+period would never empty the paint queue; and the same `GameWindowLifecycle`
+call pauses and resumes the whole engine on window visibility changes, so a
+minimized window costs nothing and comes back exactly where it left off. Files:
 `Doom.Brix/src/Doom.Brix.UI/Views/MainPage.xaml.cs`,
 `Doom.Brix/src/Doom.Brix.UI/App.xaml.cs`,
 `Doom.Brix/src/Doom.Brix.WinWpfSkia/Program.cs`.

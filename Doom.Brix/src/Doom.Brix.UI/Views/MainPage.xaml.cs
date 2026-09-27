@@ -50,26 +50,13 @@ public sealed partial class MainPage : Page
         //  it — KeyDown then routes to the focused element's ancestors, never
         //  the canvas, and the keyboard goes dead until Tab restores focus.
         //  Hand focus straight back after every click. handledEventsToo: true
-        //  because the press may already be marked handled.
+        //  because the press may already be marked handled. (Window activation is
+        //  the third path that loses focus; GameWindowLifecycle, attached in
+        //  App.xaml.cs, restores it there.)
         GameCanvas.AddHandler(
             UIElement.PointerReleasedEvent,
             new PointerEventHandler((_, _) => FocusGameCanvas()),
             handledEventsToo: true);
-    }
-
-    //Called by the app when the window is activated. The canvas keeps keyboard
-    //  focus across a click (handled above) and gets it on first start, but
-    //  nothing restored it when the window itself was deactivated and activated
-    //  again — alt-tabbing away and back, or raising the window from another
-    //  application, left the canvas unfocused and the keyboard silently dead
-    //  until the player clicked. Game Mode only: in Assets Mode the embedded
-    //  browser owns the keyboard, and stealing focus would break typing in it.
-    internal void OnWindowActivated()
-    {
-        if (DataContext is MainViewModel { IsGameMode: true })
-        {
-            FocusGameCanvas();
-        }
     }
 
     //Defer to the dispatcher so focus lands after whatever took it from the

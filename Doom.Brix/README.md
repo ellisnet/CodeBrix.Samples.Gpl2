@@ -193,16 +193,20 @@ Doom.Brix/tests/libs/Doom.Brix.Game.Tests/bin/Debug/net10.0/Doom.Brix.Game.Tests
 Doom.Brix/tests/libs/Doom.Brix.GameEngine.Tests/bin/Debug/net10.0/Doom.Brix.GameEngine.Tests
 Doom.Brix/tests/libs/Doom.Brix.Settings.Tests/bin/Debug/net10.0/Doom.Brix.Settings.Tests
 Doom.Brix/tests/libs/Doom.Brix.Synth.Tests/bin/Debug/net10.0/Doom.Brix.Synth.Tests
+Doom.Brix/tests/Doom.Brix.PlayTests/bin/Debug/net10.0/Doom.Brix.PlayTests
 ```
 
-The tests need no GPU, no audio device and no network; music synthesis is
-exercised headless. Two of the suites want game data that is deliberately not
-committed, and they take opposite policies about it:
+The tests need no GPU and no Internet access; music synthesis is exercised
+headless, and the PlayTests serve their browser pages from a loopback fixture.
+Only the opt-in Game Mode PlayTests open the audio device. Three of the suites
+want game data that is deliberately not committed, and they take different
+policies about it:
 
 | Suite | Data it looks for | When the data is absent |
 | --- | --- | --- |
 | `Doom.Brix.GameEngine.Tests` | `Downloaded/Doom.Brix_assets/DOOM1.WAD`, found by walking up from the test binary | The data-dependent tests **fail** with a message naming the exact path, saying the folder is git-ignored, and pointing at the application's Assets Mode as the way to obtain the file; the pure math and logic tests are unaffected |
 | `Doom.Brix.Assets.Tests` | `Downloaded/doom_assets/doom19s.zip`, found the same way (note the different folder name) | Those tests **skip** through `Assert.SkipWhen(...)`; the classifier and negative-path tests still run |
+| `Doom.Brix.PlayTests` | `Downloaded/Doom.Brix_assets/DOOM1.WAD` and `doom19s.zip`, found the same way | The Game Mode tests **skip** through xUnit's `SkipUnless`; the Assets Mode tests need no game data |
 
 `Doom.Brix.Synth.Tests` needs only the committed SoundFont and its committed
 `ReferenceData`, both of which it locates by walking up from the test binary.
@@ -233,6 +237,7 @@ Doom.Brix/
       Doom.Brix.GameEngine/         The adapted managed-doom engine (ManagedDoom.* namespaces)
       Doom.Brix.Settings/           Thin application-named facade over the AppSettings add-in
   tests/
+    Doom.Brix.PlayTests/            UI tests of the real page in the CodeBrix.Platform PlayTest head
     libs/
       Doom.Brix.Assets.Tests/       URL classification and the verify/extract pipeline
       Doom.Brix.Game.Tests/         Sqlite storage round-trips and the gamepad input logic
@@ -273,6 +278,7 @@ csproj.
 | CodeBrix.Platform.Fonts.OpenSans | The application font, set as the default text font family and declared as an `App.xaml` resource | `Doom.Brix/src/Doom.Brix.UI/App.xaml`, `Doom.Brix/src/Doom.Brix.UI/App.xaml.cs` |
 | CodeBrix.Audio | The SoundFont synthesizer the MUS and MIDI decoders render music through, and the PCM types the sound backend registers clips with | `Doom.Brix/src/libs/Doom.Brix.Game/CodeBrixMusic.cs`, `Doom.Brix/src/libs/Doom.Brix.Game/CodeBrixSound.cs`, `Doom.Brix/src/libs/Doom.Brix.GameEngine/Audio/` |
 | CodeBrix.Compression | Reads the downloaded zip and the split self-extracting archive inside it, and supplies the CRC-32 used for verification | `Doom.Brix/src/libs/Doom.Brix.Assets/DoomAssetPipeline.cs`, `Doom.Brix/src/libs/Doom.Brix.Assets/Internal/ChecksumHelper.cs` |
+| CodeBrix.Platform.PlayTest | The offscreen test head the PlayTests run the real page in, with its locators, input, scripted folder picker and screenshots | `Doom.Brix/tests/Doom.Brix.PlayTests/Doom.Brix.PlayTests.csproj`, `Doom.Brix/tests/Doom.Brix.PlayTests/AppFixture.cs` |
 | CodeBrix.Sqlite | Reached transitively through the AppSettings add-in; the settings tests use its types directly | `Doom.Brix/tests/libs/Doom.Brix.Settings.Tests/SettingsStoreTests.cs` |
 
 Third-party libraries:
@@ -281,7 +287,7 @@ Third-party libraries:
 | --- | --- | --- |
 | Microsoft.Extensions.Hosting | The generic host builder `SimpleServiceResolver` builds the container from | `Doom.Brix/src/Doom.Brix.Core/Helpers/HostHelper.cs` |
 | Microsoft.Extensions.Logging.Console | The debug-only console logger factory installed before the host is built | `Doom.Brix/src/Doom.Brix.UI/App.xaml.cs` |
-| xUnit v3, its Visual Studio runner, and the .NET test SDK | The test framework and the Microsoft.Testing.Platform runner plumbing | the test project csproj files under `Doom.Brix/tests/libs` |
+| xUnit v3, its Visual Studio runner, and the .NET test SDK | The test framework and the Microsoft.Testing.Platform runner plumbing | the test project csproj files under `Doom.Brix/tests` |
 | SilverAssertions | The fluent assertion style every test uses | every test file, for example `Doom.Brix/tests/libs/Doom.Brix.Assets.Tests/AssetUrlClassifierTests.cs` |
 
 ## Worth studying in this application

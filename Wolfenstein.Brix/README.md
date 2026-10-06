@@ -131,7 +131,7 @@ facade.
 There is one solution, `Wolfenstein.Brix/Wolfenstein.Brix.slnx`. It holds the
 shared UI project, the Core library, all six heads, a `Libraries` folder for the
 projects under `src/libs`, and a `Tests` folder for the projects under
-`tests/libs`. It restores and builds with the plain .NET SDK on Linux, macOS and
+`tests`. It restores and builds with the plain .NET SDK on Linux, macOS and
 Windows, so there is nothing to open elsewhere.
 
 The heads:
@@ -184,11 +184,13 @@ each test project's own executable:
 ```text
 dotnet build Wolfenstein.Brix/Wolfenstein.Brix.slnx
 Wolfenstein.Brix/tests/libs/Wolfenstein.Brix.GameEngine.Tests/bin/Debug/net10.0/Wolfenstein.Brix.GameEngine.Tests
+Wolfenstein.Brix/tests/Wolfenstein.Brix.PlayTests/bin/Debug/net10.0/Wolfenstein.Brix.PlayTests
 ```
 
-The tests need no GPU and no network. The data-dependent tests do need the
-shareware files on disk, and the two projects that want data take deliberately
-different routes.
+The tests need no GPU and no Internet access; the PlayTests serve their browser
+pages from a loopback fixture, and only their opt-in Game Mode tests open the
+audio device. The data-dependent tests do need the shareware files on disk, and
+the projects that want data take deliberately different routes.
 `Wolfenstein.Brix/tests/libs/Wolfenstein.Brix.GameEngine.Tests/TestWl1.cs` walks
 up from the test binary looking for `Downloaded/Wolfenstein.Brix_assets/` and,
 when it is absent, throws with a message naming the data files, the folder to put
@@ -196,7 +198,9 @@ them in, and the fact that the application's Assets Mode can download and instal
 them — so those tests fail loudly with instructions rather than silently.
 `Wolfenstein.Brix.Assets.Tests` looks for the downloaded archive under
 `Downloaded/wolfenstein_assets/` and calls `Assert.SkipWhen(...)`, so its
-pipeline tests skip quietly instead. The `Downloaded` folder is git-ignored. The
+pipeline tests skip quietly instead. `Wolfenstein.Brix.PlayTests` looks in
+`Downloaded/Wolfenstein.Brix_assets/` and its Game Mode tests skip through
+xUnit's `SkipUnless`; its Assets Mode tests need no game data. The `Downloaded` folder is git-ignored. The
 pure math, decompression, classifier and gamepad tests need no data at all and
 always run.
 
@@ -236,6 +240,7 @@ Wolfenstein.Brix/
       Wolfenstein.Brix.Settings/         The application-named settings facade: SettingsService
                                          and LoggingService
   tests/
+    Wolfenstein.Brix.PlayTests/          UI tests of the real page in the CodeBrix.Platform PlayTest head
     libs/
       Wolfenstein.Brix.Assets.Tests/     Classifier and pipeline tests; skip without the archive
       Wolfenstein.Brix.GameEngine.Tests/ Decompression, palette, parsing, rendering, session and
@@ -259,7 +264,7 @@ all: no packages, no projects, just managed game code, which is what makes it
 testable headless. `Wolfenstein.Brix.Assets` references only CodeBrix.Compression.
 Only `Wolfenstein.Brix.Game` touches the GameEngine add-in and its SDL2 companion,
 so the engine add-in never leaks into the game logic or the acquisition pipeline.
-Each test project references exactly the one library it tests.
+Each test project under `tests/libs` references exactly the one library it tests.
 
 ## CodeBrix libraries and add-ins used
 
@@ -275,7 +280,8 @@ Each test project references exactly the one library it tests.
 | CodeBrix.Compression | CRC-32 for checksum verification, zip reading for the outer archive, and DCL "implode" decompression for the installer archive inside it. | `Wolfenstein.Brix/src/libs/Wolfenstein.Brix.Assets/WolfensteinAssetPipeline.cs`, `Internal/ChecksumHelper.cs` |
 | CodeBrix.Audio | Reached through the GameEngine add-in; the sound backend uses its playback-state enumeration to find an idle channel. | `Wolfenstein.Brix/src/libs/Wolfenstein.Brix.Game/WolfSound.cs` |
 | CodeBrix.Sqlite | Reached through the AppSettings add-in as the settings store's backing; the settings tests reference it directly. | `Wolfenstein.Brix/tests/libs/Wolfenstein.Brix.Settings.Tests/SettingsStoreTests.cs` |
-| SilverAssertions | The assertion style in every test project. | `Wolfenstein.Brix/tests/libs/` |
+| CodeBrix.Platform.PlayTest | The offscreen test head the PlayTests run the real page in, with its locators, input, scripted folder picker and screenshots. | `Wolfenstein.Brix/tests/Wolfenstein.Brix.PlayTests/Wolfenstein.Brix.PlayTests.csproj`, `Wolfenstein.Brix/tests/Wolfenstein.Brix.PlayTests/AppFixture.cs` |
+| SilverAssertions | The assertion style in every test project. | `Wolfenstein.Brix/tests/` |
 
 Third-party libraries:
 
@@ -283,7 +289,7 @@ Third-party libraries:
 | --- | --- | --- |
 | Microsoft.Extensions.Hosting | The generic host builder `SimpleServiceResolver` builds its container from. | `Wolfenstein.Brix/src/Wolfenstein.Brix.Core/Helpers/HostHelper.cs` |
 | Microsoft.Extensions.Logging (console) | Debug-only console logging, wired from each head's `Main` before the host is built. | `Wolfenstein.Brix/src/Wolfenstein.Brix.UI/App.xaml.cs` |
-| xUnit v3 | The test framework, run through Microsoft.Testing.Platform. | `Wolfenstein.Brix/tests/libs/` |
+| xUnit v3 | The test framework, run through Microsoft.Testing.Platform. | `Wolfenstein.Brix/tests/` |
 
 ## Worth studying in this application
 

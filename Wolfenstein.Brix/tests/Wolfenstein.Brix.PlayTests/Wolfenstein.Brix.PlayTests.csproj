@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Wolfenstein.Brix.PlayTests</RootNamespace>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <CodeBrixPlayTestPreferredOrientation Condition="'$(CodeBrixPlayTestPreferredOrientation)' == ''">Landscape</CodeBrixPlayTestPreferredOrientation>
+    <CodeBrixPlayTestPreferredTheme Condition="'$(CodeBrixPlayTestPreferredTheme)' == ''">Light</CodeBrixPlayTestPreferredTheme>
+    <DefineConstants>$(DefineConstants);HAS_CODEBRIX;HAS_CODEBRIX_WINUI</DefineConstants>
+  </PropertyGroup>
+  <Import Project="../../src/Wolfenstein.Brix.UI/Wolfenstein.Brix.UI.projitems" Label="Shared" />
+  <ItemGroup>
+    <ProjectReference Include="../../src/Wolfenstein.Brix.Core/Wolfenstein.Brix.Core.csproj" />
+    <PackageReference Include="CodeBrix.Platform.PlayTest.ApacheLicenseForever" Version="1.0.279.30" />
+    <!-- Exercise the WebView add-in together with the preview head. -->
+    <PackageReference Include="CodeBrix.Platform.WebView.ApacheLicenseForever" Version="1.0.279.30" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="SilverAssertions.ApacheLicenseForever" Version="1.0.248.1071" />
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

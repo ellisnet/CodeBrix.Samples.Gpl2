@@ -17,6 +17,7 @@
     <Project Path="src/libs/Wolfenstein.Brix.Settings/Wolfenstein.Brix.Settings.csproj" />
   </Folder>
   <Folder Name="/Tests/">
+    <Project Path="tests/Wolfenstein.Brix.PlayTests/Wolfenstein.Brix.PlayTests.csproj" />
     <Project Path="tests/libs/Wolfenstein.Brix.Assets.Tests/Wolfenstein.Brix.Assets.Tests.csproj" />
     <Project Path="tests/libs/Wolfenstein.Brix.Game.Tests/Wolfenstein.Brix.Game.Tests.csproj" />
     <Project Path="tests/libs/Wolfenstein.Brix.GameEngine.Tests/Wolfenstein.Brix.GameEngine.Tests.csproj" />

@@ -17,6 +17,7 @@
     <Project Path="src/libs/Doom.Brix.Settings/Doom.Brix.Settings.csproj" />
   </Folder>
   <Folder Name="/Tests/">
+    <Project Path="tests/Doom.Brix.PlayTests/Doom.Brix.PlayTests.csproj" />
     <Project Path="tests/libs/Doom.Brix.Assets.Tests/Doom.Brix.Assets.Tests.csproj" />
     <Project Path="tests/libs/Doom.Brix.Game.Tests/Doom.Brix.Game.Tests.csproj" />
     <Project Path="tests/libs/Doom.Brix.GameEngine.Tests/Doom.Brix.GameEngine.Tests.csproj" />

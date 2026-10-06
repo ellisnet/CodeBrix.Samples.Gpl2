@@ -2,6 +2,7 @@ using CodeBrix.Platform.GameEngine.Host.Hosting;
 using CodeBrix.Platform.Simple;
 using Doom.Brix.Helpers;
 using Doom.Brix.Settings;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -12,7 +13,10 @@ namespace Doom.Brix;
 
 public partial class App : Application
 {
-    public App()
+    public App() : this(null) { }
+
+    //Alternate hosts may replace services before any view models are constructed.
+    public App(Action<IServiceCollection> configureServices)
     {
         //Set Open Sans as the default font for all text in the application
         global::CodeBrix.Platform.UI.FeatureConfiguration.Font.DefaultTextFontFamily =
@@ -21,13 +25,17 @@ public partial class App : Application
         SimpleServiceResolver.CreateInstance(HostHelper.GetHost(), services =>
         {
             //Register the app's services here
-
+            configureServices?.Invoke(services);
         });
         SimpleViewModel.SetIsDesignMode(false);
 
         //Open (or silently create) the single portable settings.sqlite store —
         //  including its startup auto-backup and pruning — before any UI renders.
-        SettingsService.Initialize();
+        //  A host that already opened a store of its own (a test host) keeps it.
+        if (!SettingsService.IsInitialized)
+        {
+            SettingsService.Initialize();
+        }
 
         InitializeComponent();
     }

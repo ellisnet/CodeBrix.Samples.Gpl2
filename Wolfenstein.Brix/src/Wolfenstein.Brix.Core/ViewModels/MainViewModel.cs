@@ -37,6 +37,7 @@ public class MainViewModel : SimpleViewModel
     private WolfGameHost _gameHost;
     private double _downloadProgress;
     private bool _hasNavigated;
+    private readonly string _startUrl = WolfensteinAssetCatalog.DefaultBrowseUrl;
 
     //Accepts bare host names ("example.com/page") by defaulting to https.
     internal static string NormalizeUrl(string text)
@@ -59,6 +60,13 @@ public class MainViewModel : SimpleViewModel
     public MainViewModel()
     {
         if (IsDesignMode(true)) { return; } //Leave as the first line of constructor
+
+        //An alternate host (an offline test fixture) may point the browser elsewhere.
+        if (SimpleServiceResolver.Instance.GetService(typeof(AssetsBrowserOptions)) is AssetsBrowserOptions options)
+        {
+            _startUrl = options.StartUrl;
+            AddressText = _startUrl;
+        }
 
         _assetsFolder = SettingsService.Get<string>(AssetsFolderKey);
         if (!string.IsNullOrWhiteSpace(_assetsFolder) && !Directory.Exists(_assetsFolder))
@@ -264,6 +272,21 @@ public class MainViewModel : SimpleViewModel
         _gameHost.Initialize();
     }
 
+    /// <summary>
+    /// Shuts the game host down (its loop, audio and gamepads) when the page that owns
+    /// this view model is replaced; the application window never does that itself.
+    /// </summary>
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing && _gameHost != null)
+        {
+            _gameHost.Dispose();
+            _gameHost = null;
+        }
+
+        base.Dispose(disposing);
+    }
+
     #endregion
 
     #region | Embedded browser bridge (wired by MainPage code-behind) |
@@ -279,7 +302,7 @@ public class MainViewModel : SimpleViewModel
         if (_hasNavigated || IsGameMode || !HasAssetsFolder || NavigateToUrl == null) { return; }
 
         _hasNavigated = true;
-        NavigateToUrl(WolfensteinAssetCatalog.DefaultBrowseUrl);
+        NavigateToUrl(_startUrl);
     }
 
     /// <summary>Tracks the page the user is on (for the address bar).</summary>

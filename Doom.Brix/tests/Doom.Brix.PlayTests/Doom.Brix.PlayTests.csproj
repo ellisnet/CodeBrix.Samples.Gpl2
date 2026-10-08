@@ -15,9 +15,9 @@
   <Import Project="../../src/Doom.Brix.UI/Doom.Brix.UI.projitems" Label="Shared" />
   <ItemGroup>
     <ProjectReference Include="../../src/Doom.Brix.Core/Doom.Brix.Core.csproj" />
-    <PackageReference Include="CodeBrix.Platform.PlayTest.ApacheLicenseForever" Version="1.0.280.1176" />
+    <PackageReference Include="CodeBrix.Platform.PlayTest.ApacheLicenseForever" Version="1.0.281.314" />
     <!-- Exercise the WebView add-in together with the preview head. -->
-    <PackageReference Include="CodeBrix.Platform.WebView.ApacheLicenseForever" Version="1.0.280.1176" />
+    <PackageReference Include="CodeBrix.Platform.WebView.ApacheLicenseForever" Version="1.0.281.314" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageReference Include="SilverAssertions.ApacheLicenseForever" Version="1.0.248.1071" />
     <PackageReference Include="xunit.v3" Version="4.0.1" />

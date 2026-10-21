@@ -2,11 +2,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using CodeBrix.Platform.GameEngine.Audio;
 using CodeBrix.Platform.PlayTest;
 using Doom.Brix.Settings;
 using Doom.Brix.ViewModels;
@@ -52,8 +55,16 @@ public sealed class AppFixture : IAsyncLifetime
     public static string GameDataDirectory { get; } = FindGameData();
     public static bool HasGameData => GameDataDirectory != null;
 
+    // PlayTests are silent unless the developer opts in with CODEBRIX_PLAYTEST_AUDIBLE=1, or the
+    // CodeBrixPlayTestAudible project property. The variable overrides the property, as the PlayTest
+    // package's own theme and orientation switches do.
+    public static bool IsAudible { get; } = ReadAudible();
+
     public async ValueTask InitializeAsync()
     {
+        // Game Mode still drives the real audio device, but at zero master volume. The mixer is
+        // process-wide and the game never sets it, so this holds for every game host the run starts.
+        if (!IsAudible) AudioMixer.MasterVolume = 0f;
         Directory.CreateDirectory(DataDirectory);
         _server.Start();
         // The application keeps a store that is already open, so it never touches the user's settings.
@@ -159,6 +170,14 @@ public sealed class AppFixture : IAsyncLifetime
         try { if (Directory.Exists(path)) Directory.Delete(path, recursive: true); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
+    }
+
+    private static bool ReadAudible()
+    {
+        var value = Environment.GetEnvironmentVariable("CODEBRIX_PLAYTEST_AUDIBLE")
+            ?? typeof(AppFixture).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+                .FirstOrDefault(metadata => metadata.Key == "CodeBrixPlayTestAudible")?.Value;
+        return value == "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindGameData()

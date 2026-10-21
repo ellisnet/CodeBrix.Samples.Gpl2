@@ -43,7 +43,6 @@ internal sealed class CodeBrixMusic : IMusic, IDisposable
     private volatile IMusicDecoder reserved;
 
     private Bgm currentBgm;
-    private bool started;
 
     public CodeBrixMusic(Config config, GameContent content, string soundFontPath)
     {
@@ -64,6 +63,15 @@ internal sealed class CodeBrixMusic : IMusic, IDisposable
 
         stream = new StreamingAudioSource(FillBuffer);
         currentBgm = Bgm.NONE;
+
+        // Start now, on the UI thread (the host constructs this in OnLoadContent), not on
+        // the first StartMusic call, which arrives on the game-loop thread: the first voice
+        // to play starts the shared audio engine on its own thread, and the engine's Windows
+        // backend initializes COM there but uninitializes it on whichever thread later calls
+        // AudioSystem.Shutdown() (the UI thread). Started from the game-loop thread, that
+        // strips the UI thread's own COM apartment, and WebView2 can no longer start in the
+        // process. The fill callback plays silence until a track is reserved.
+        stream.Start();
     }
 
     public void StartMusic(Bgm bgm, bool loop)
@@ -76,12 +84,6 @@ internal sealed class CodeBrixMusic : IMusic, IDisposable
         var lump = "D_" + DoomInfo.BgmNames[(int)bgm].ToString().ToUpper();
         var data = wad.ReadLump(lump);
         reserved = MusicDecoderFactory.Create(data, loop);
-
-        if (!started)
-        {
-            stream.Start();
-            started = true;
-        }
 
         currentBgm = bgm;
     }
